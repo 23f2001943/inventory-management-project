@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block page_class %}home-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+
+{% block free_content %}
+<div class="home-free text-center text-white">
+
+    <h1 class="text-shadow">WELCOME TO INVENTORY MANAGEMENT SYSTEM</h1>
+    <h3 class="text-shadow">
+        Manage stock, track inventory, and streamline operations
+    </h3>
+
+    <h6 class="mb-2 text-outline-white text-black">
+        If you already have an account, please login.
+    </h6>
+    <div class="mb-4">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary px-4">
+            Login
+        </a>
+    </div>
+
+    <h6 class="mb-2 text-outline-white text-black">
+        New here? Register as an employee.
+    </h6>
+    <div class="mb-2">
+        <a href="{{ url_for('auth.employee_register') }}" class="btn btn-dark px-4">
+            Register as Employee
+        </a>
+    </div>
+
+</div>
+{% endblock %}
