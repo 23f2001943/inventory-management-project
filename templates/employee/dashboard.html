@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% include "partials/navbar.html" %}
+{% block page_class %}student-dashboard-bg{% endblock %}
+
+{% block boxed_content %}
+<div class="content-box">
+    <h1>Employee Dashboard</h1>
+    <p>Welcome, {{ session.user_name }}</p>
+</div>
+{% endblock %}

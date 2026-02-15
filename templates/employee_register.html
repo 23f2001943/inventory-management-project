@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block page_class %}home-bg{% endblock %}
+
+{% block boxed_content %}
+<div class="content-box">
+    <h1>Employee Registration</h1>
+    <form method="post">
+        <input type="text" name="full_name" class="form-control mb-3" placeholder="Full Name" required>
+        <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
+        <input type="password" name="password" class="form-control mb-3" placeholder="Password" required>
+        <button class="btn btn-dark w-100">Register</button>
+    </form>
+</div>
+{% endblock %}

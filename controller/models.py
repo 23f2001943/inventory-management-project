@@ -1,0 +1,89 @@
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+
+db = SQLAlchemy()
+
+
+# =========================
+# User Table
+# =========================
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    full_name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+
+    is_active = db.Column(db.Boolean, default=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    roles = db.relationship(
+        "Role",
+        secondary="user_roles",
+        backref=db.backref("users", lazy="dynamic")
+    )
+
+    def has_role(self, role_name):
+        return any(role.name == role_name for role in self.roles)
+
+
+# =========================
+# Role Table
+# =========================
+class Role(db.Model):
+    __tablename__ = "roles"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+
+
+# =========================
+# Association Table
+# =========================
+class UserRole(db.Model):
+    __tablename__ = "user_roles"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"))
+
+class Foil(db.Model):
+    __tablename__ = "foils"
+
+    id = db.Column(db.Integer, primary_key=True)
+    foil_code = db.Column(db.String(50),  nullable=False)
+    foil_type = db.Column(db.String(20), nullable=False)
+    length_in = db.Column(db.Float, nullable=False)
+    breadth_in = db.Column(db.Float, nullable=False)
+    quantity = db.Column(db.Integer, default=0)
+    price = db.Column(db.Float, nullable=False)
+
+class Board(db.Model):
+    __tablename__ = "boards"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    board_code = db.Column(db.String(50),  nullable=False)
+    board_type = db.Column(db.String(50), nullable=False)
+
+    length_in = db.Column(db.Float, nullable=False)
+    breadth_in = db.Column(db.Float, nullable=False)
+    thickness_mm = db.Column(db.Float)
+
+    quantity = db.Column(db.Integer, default=0)
+    price = db.Column(db.Float, nullable=False)
+
+class Accessory(db.Model):
+    __tablename__ = "accessories"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    accessory_code = db.Column(db.String(50),  nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+
+    quantity = db.Column(db.Integer, default=0)
+    price = db.Column(db.Float, nullable=False)

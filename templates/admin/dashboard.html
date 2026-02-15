@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+<div class="dashboard-container">
+
+    <!-- Create Drive Button -->
+    <div class="content-container mb-4">
+        <a href="{{ url_for('admin.add_item') }}" class="back-button-wrapper">
+            <button type="button" class="btn btn-dark back-button">
+                + Create New Item
+            </button>
+        </a>
+    </div>
+
+    <div class="dashboard-grid">
+
+    <!-- Foils Card -->
+     <div class="dashboard-card" style="min-height:240px">
+        <h1>Foils</h1>
+        <a href="{{ url_for('admin.view_foils') }}" class="btn btn-primary">
+            View All
+        </a>
+    </div>
+            
+
+</div>
+
+</div>
+{% endblock %}

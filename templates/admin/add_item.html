@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block page_class %}admin-dashboard-bg{% endblock %}
+{% block boxed_content %}{% endblock %}
+
+{% block free_content %}
+<div class="content-box">
+
+    <h2>Add Inventory Data</h2>
+
+    <form method="post" enctype="multipart/form-data">
+
+        <select name="item_type" class="form-select mb-3" required>
+            <option value="">Select Item Type</option>
+            <option value="foil">Foil</option>
+            <option value="board">Board</option>
+            <option value="accessory">Accessory</option>
+        </select>
+
+        <input type="file"
+               name="excel_file"
+               class="form-control mb-3"
+               accept=".xlsx,.xls"
+               required>
+
+        <button class="btn btn-success w-100">
+            Upload Excel
+        </button>
+
+    </form>
+
+</div>
+{% endblock %}

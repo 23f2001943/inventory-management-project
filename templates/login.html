@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block page_class %}login-bg{% endblock %}
+
+{% block boxed_content %}
+<div class="content-box">
+    <h1>Login</h1>
+    <form method="post">
+        <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
+        <input type="password" name="password" class="form-control mb-3" placeholder="Password" required>
+        <button class="btn btn-primary w-100">Login</button>
+    </form>
+</div>
+{% endblock %}

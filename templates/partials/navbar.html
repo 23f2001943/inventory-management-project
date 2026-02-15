@@ -1,0 +1,68 @@
+<!-- Fixed Top Navbar -->
+<nav class="navbar navbar-dark bg-dark fixed-top px-4 d-flex justify-content-between">
+
+    <!-- LEFT: Profile Trigger -->
+    <a
+        class="d-flex align-items-center text-white text-decoration-none"
+        data-bs-toggle="offcanvas"
+        href="#profileSidebar"
+        role="button"
+    >
+        <img
+            src="{{ url_for('static', filename='scripts/images/profile.png') }}"
+            width="40"
+            height="40"
+            class="rounded-circle me-2"
+        >
+        <strong>Hello, {{ session.get("user_name") }}</strong>
+    </a>
+
+    <!-- RIGHT: Role Badge -->
+    <span class="badge bg-secondary">
+        {% if "Admin" in session.get("roles", []) %}
+            Admin
+        {% else %}
+            Employee
+        {% endif %}
+    </span>
+
+</nav>
+
+
+<!-- Profile Sidebar -->
+<div class="offcanvas offcanvas-start text-bg-dark" id="profileSidebar">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">Profile</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body">
+
+        <p><strong>Name:</strong> {{ session.get("user_name") }}</p>
+
+        {% if "Admin" in session.get("roles", []) %}
+            <p><strong>Role:</strong> Administrator</p>
+        {% else %}
+            <p><strong>Role:</strong> Employee</p>
+        {% endif %}
+
+        <hr>
+
+        {% if "Admin" in session.get("roles", []) %}
+            <a href="{{ url_for('admin.dashboard') }}"
+               class="btn btn-outline-light w-100 mb-2">
+                Admin Dashboard
+            </a>
+        {% else %}
+            <a href="{{ url_for('employee.dashboard') }}"
+               class="btn btn-outline-light w-100 mb-2">
+                Employee Dashboard
+            </a>
+        {% endif %}
+
+        <a href="{{ url_for('auth.logout') }}"
+           class="btn btn-danger w-100">
+            Logout
+        </a>
+    </div>
+</div>
