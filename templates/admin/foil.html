@@ -48,6 +48,7 @@
     <table>
         <thead>
             <tr>
+                <th>Sr. No</th>
                 <th>Code</th>
                 <th>Type</th>
                 <th>Length</th>
@@ -62,7 +63,8 @@
 
             <!-- ADD ROW -->
             <tr id="add-row" style="display:none;">
-                <form method="post" action="{{ url_for('admin.add_foil_inline') }}">
+                
+                     <td></td>
                     <td><input name="foil_code" class="form-control"></td>
                     <td><input name="foil_type" class="form-control"></td>
                     <td><input name="length_in" type="number" step="0.01" class="form-control"></td>
@@ -70,13 +72,17 @@
                     <td><input name="quantity" type="number" class="form-control"></td>
                     <td><input name="price" type="number" step="0.01" class="form-control"></td>
                     <td>
-                        <button class="btn btn-sm btn-success">Add</button>
+                        <button type="button" class="btn btn-sm btn-success" onclick="addFoil()">
+    Add
+</button>
                     </td>
-                </form>
+                
             </tr>
 
             {% for foil in foils %}
             <tr>
+
+                <td class="sr-no">{{ loop.index }}</td>
                 <input type="hidden" name="id[]" value="{{ foil.id }}">
 
     <td><input name="foil_code[]" value="{{ foil.foil_code }}" class="form-control"></td>
@@ -103,6 +109,55 @@
 <script>
 const searchInput = document.getElementById("searchInput");
 const tableBody = document.getElementById("foilTableBody");
+
+function addFoil() {
+    const row = document.getElementById("add-row");
+
+    const data = {
+        foil_code: row.querySelector("input[name='foil_code']").value,
+        foil_type: row.querySelector("input[name='foil_type']").value,
+        length_in: row.querySelector("input[name='length_in']").value,
+        breadth_in: row.querySelector("input[name='breadth_in']").value,
+        quantity: row.querySelector("input[name='quantity']").value,
+        price: row.querySelector("input[name='price']").value
+    };
+
+    // validation
+    if (!data.foil_code || !data.foil_type) {
+        alert("Please fill required fields");
+        return;
+    }
+
+    fetch("{{ url_for('admin.add_foil_inline') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams(data)
+    })
+    .then(() => {
+        location.reload(); // refresh table
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    updateSerialNumbers();
+});
+
+function updateSerialNumbers() {
+    const rows = document.querySelectorAll("#foilTableBody tr");
+
+    let count = 1;
+
+    rows.forEach(row => {
+        if (row.id === "add-row") return; // skip add row
+
+        const cell = row.querySelector(".sr-no");
+        if (cell) {
+            cell.innerText = count++;
+        }
+    });
+}
 
 function deleteSelected() {
     const checked = document.querySelectorAll("input[name='selected_ids[]']:checked");
@@ -143,27 +198,22 @@ searchInput.addEventListener("keyup", function () {
             data.forEach(f => {
                 tableBody.innerHTML += `
                     <tr>
-                        <form method="post" action="/admin/foil/update/${f.id}">
-                            <td><input name="foil_code" value="${f.foil_code}" class="form-control"></td>
-                            <td><input name="foil_type" value="${f.foil_type}" class="form-control"></td>
-                            <td><input name="length_in" value="${f.length_in}" class="form-control"></td>
-                            <td><input name="breadth_in" value="${f.breadth_in}" class="form-control"></td>
-                            <td><input name="quantity" value="${f.quantity}" class="form-control"></td>
-                            <td><input name="price" value="${f.price}" class="form-control"></td>
-                            <td>
-                                <button class="btn btn-sm btn-primary mb-1">Update</button>
-                        </form>
+    <td class="sr-no"></td>
 
-                        <form method="post" action="/admin/foil/delete/${f.id}" style="display:inline;">
-                            <button class="btn btn-sm btn-danger"
-                                onclick="return confirm('Delete this foil?')">
-                                Delete
-                            </button>
-                        </form>
-                            </td>
-                    </tr>
+    <td><input name="foil_code[]" value="${f.foil_code}" class="form-control"></td>
+    <td><input name="foil_type[]" value="${f.foil_type}" class="form-control"></td>
+    <td><input name="length_in[]" value="${f.length_in}" class="form-control"></td>
+    <td><input name="breadth_in[]" value="${f.breadth_in}" class="form-control"></td>
+    <td><input name="quantity[]" value="${f.quantity}" class="form-control"></td>
+    <td><input name="price[]" value="${f.price}" class="form-control"></td>
+
+    <td>
+        <input type="checkbox" name="selected_ids[]" value="${f.id}">
+    </td>
+</tr>
                 `;
             });
+            updateSerialNumbers();
         });
 });
 </script>
