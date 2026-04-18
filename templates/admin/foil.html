@@ -55,6 +55,7 @@
                 <th>Breadth</th>
                 <th>Qty</th>
                 <th>Price</th>
+                <th>Amount</th>
                 <th>Delete</th>
             </tr>
         </thead>
@@ -71,6 +72,7 @@
                     <td><input name="breadth_in" type="number" step="0.01" class="form-control"></td>
                     <td><input name="quantity" type="number" class="form-control"></td>
                     <td><input name="price" type="number" step="0.01" class="form-control"></td>
+                    <td class="amount"></td>
                     <td>
                         <button type="button" class="btn btn-sm btn-success" onclick="addFoil()">
     Add
@@ -90,7 +92,11 @@
     <td><input name="length_in[]" type="number" step="0.01" value="{{ foil.length_in }}" class="form-control"></td>
     <td><input name="breadth_in[]" type="number" step="0.01" value="{{ foil.breadth_in }}" class="form-control"></td>
     <td><input name="quantity[]" type="number" value="{{ foil.quantity }}" class="form-control"></td>
-    <td><input name="price[]" type="number" step="0.01" value="{{ foil.price }}" class="form-control"></td>
+    <td><input name="price[]" value="{{ foil.price }}" class="form-control price"></td>
+
+<td class="amount">
+    {{ foil.quantity * foil.price }}
+</td>
                 <td>
         <input type="checkbox" name="selected_ids[]" value="{{ foil.id }}">
     </td>
@@ -109,6 +115,23 @@
 <script>
 const searchInput = document.getElementById("searchInput");
 const tableBody = document.getElementById("foilTableBody");
+
+function updateAmounts() {
+    const rows = document.querySelectorAll("#foilTableBody tr");
+
+    rows.forEach(row => {
+        const qtyInput = row.querySelector("input[name='quantity[]'], input[name='quantity']");
+        const priceInput = row.querySelector("input[name='price[]'], input[name='price']");
+        const amountCell = row.querySelector(".amount");
+
+        if (!qtyInput || !priceInput || !amountCell) return;
+
+        const qty = parseFloat(qtyInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+
+        amountCell.innerText = (qty * price).toFixed(2);
+    });
+}
 
 function addFoil() {
     const row = document.getElementById("add-row");
@@ -139,6 +162,12 @@ function addFoil() {
         location.reload(); // refresh table
     });
 }
+document.addEventListener("input", function(e) {
+    if (e.target.name === "quantity[]" || e.target.name === "price[]" ||
+        e.target.name === "quantity" || e.target.name === "price") {
+        updateAmounts();
+    }
+});
 
 document.addEventListener("DOMContentLoaded", function() {
     updateSerialNumbers();
@@ -205,8 +234,13 @@ searchInput.addEventListener("keyup", function () {
     <td><input name="length_in[]" value="${f.length_in}" class="form-control"></td>
     <td><input name="breadth_in[]" value="${f.breadth_in}" class="form-control"></td>
     <td><input name="quantity[]" value="${f.quantity}" class="form-control"></td>
-    <td><input name="price[]" value="${f.price}" class="form-control"></td>
+    <td><input name="price[]" value="${f.price}" class="form-control price"></td>
 
+<td class="amount"></td>
+
+<td>
+    <input type="checkbox" name="selected_ids[]" value="${f.id}">
+</td>
     <td>
         <input type="checkbox" name="selected_ids[]" value="${f.id}">
     </td>
@@ -214,6 +248,7 @@ searchInput.addEventListener("keyup", function () {
                 `;
             });
             updateSerialNumbers();
+            updateAmounts();
         });
 });
 </script>
