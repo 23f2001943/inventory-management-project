@@ -23,6 +23,12 @@
         <button form="bulkForm" class="btn btn-primary">
             💾 Save All Changes
         </button>
+
+        <!-- ✅ DELETE BUTTON -->
+    <button type="button" class="btn btn-danger"
+        onclick="deleteSelected()">
+    🗑 Delete Selected
+</button>
     </div>
 </div>
 
@@ -48,7 +54,7 @@
                 <th>Breadth</th>
                 <th>Qty</th>
                 <th>Price</th>
-                <th>Action</th>
+                <th>Delete</th>
             </tr>
         </thead>
 
@@ -71,29 +77,17 @@
 
             {% for foil in foils %}
             <tr>
-                <!-- IMPORTANT: hidden id -->
                 <input type="hidden" name="id[]" value="{{ foil.id }}">
 
-                <td><input name="foil_code[]" value="{{ foil.foil_code }}" class="form-control"></td>
-                <td><input name="foil_type[]" value="{{ foil.foil_type }}" class="form-control"></td>
-                <td><input name="length_in[]" type="number" step="0.01" value="{{ foil.length_in }}" class="form-control"></td>
-                <td><input name="breadth_in[]" type="number" step="0.01" value="{{ foil.breadth_in }}" class="form-control"></td>
-                <td><input name="quantity[]" type="number" value="{{ foil.quantity }}" class="form-control"></td>
-                <td><input name="price[]" type="number" step="0.01" value="{{ foil.price }}" class="form-control"></td>
-
+    <td><input name="foil_code[]" value="{{ foil.foil_code }}" class="form-control"></td>
+    <td><input name="foil_type[]" value="{{ foil.foil_type }}" class="form-control"></td>
+    <td><input name="length_in[]" type="number" step="0.01" value="{{ foil.length_in }}" class="form-control"></td>
+    <td><input name="breadth_in[]" type="number" step="0.01" value="{{ foil.breadth_in }}" class="form-control"></td>
+    <td><input name="quantity[]" type="number" value="{{ foil.quantity }}" class="form-control"></td>
+    <td><input name="price[]" type="number" step="0.01" value="{{ foil.price }}" class="form-control"></td>
                 <td>
-                    <!-- ❌ removed update button -->
-                    
-                    <!-- delete stays separate -->
-                    <form method="post"
-                          action="{{ url_for('admin.delete_foil', foil_id=foil.id) }}"
-                          style="display:inline;">
-                        <button class="btn btn-sm btn-danger"
-                            onclick="return confirm('Delete this foil?')">
-                            Delete
-                        </button>
-                    </form>
-                </td>
+        <input type="checkbox" name="selected_ids[]" value="{{ foil.id }}">
+    </td>
             </tr>
             {% endfor %}
 
@@ -109,6 +103,23 @@
 <script>
 const searchInput = document.getElementById("searchInput");
 const tableBody = document.getElementById("foilTableBody");
+
+function deleteSelected() {
+    const checked = document.querySelectorAll("input[name='selected_ids[]']:checked");
+
+    if (checked.length === 0) {
+        alert("Select at least one row to delete");
+        return;
+    }
+
+    if (!confirm("Delete selected foils?")) return;
+
+    const form = document.getElementById("bulkForm");
+
+    // change form action temporarily
+    form.action = "{{ url_for('admin.bulk_delete_foils') }}";
+    form.submit();
+}
 
 searchInput.addEventListener("keyup", function () {
     const query = this.value;

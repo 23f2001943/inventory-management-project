@@ -203,3 +203,20 @@ def search_foils():
         })
 
     return jsonify(result)
+
+
+@admin_bp.route("/foils/bulk-delete", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_delete_foils():
+    ids = request.form.getlist("selected_ids[]")
+
+    for id in ids:
+        foil = Foil.query.get(id)
+        if foil:
+            db.session.delete(foil)
+
+    db.session.commit()
+
+    flash(f"{len(ids)} foils deleted successfully", "success")
+    return redirect(url_for("admin.view_foils"))
