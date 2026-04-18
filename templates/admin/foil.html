@@ -19,6 +19,15 @@
     </div>
 
     <div class="page-title">Foils Inventory</div>
+
+    <!-- 🔍 SEARCH BAR (ADD HERE) -->
+<input 
+    type="text" 
+    id="searchInput"
+    placeholder="Search by Foil Code..."
+    class="form-control mb-3"
+    style="max-width: 300px;"
+>
     
     <div class="glass-table">
         <table>
@@ -34,7 +43,7 @@
                 </tr>
             </thead>
 
-            <tbody>
+            <tbody id="foilTableBody">
 
                 <!-- ADD ROW (HIDDEN INITIALLY) -->
                 <tr id="add-row" style="display:none;">
@@ -83,4 +92,55 @@
 
 </div>
 
+
+<script>
+const searchInput = document.getElementById("searchInput");
+const tableBody = document.getElementById("foilTableBody");
+
+searchInput.addEventListener("keyup", function () {
+    const query = this.value;
+
+    fetch(`/admin/foils/search?q=${query}`)
+        .then(res => res.json())
+        .then(data => {
+            tableBody.innerHTML = "";
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding:20px;">
+                            ❌ No foils found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            data.forEach(f => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <form method="post" action="/admin/foil/update/${f.id}">
+                            <td><input name="foil_code" value="${f.foil_code}" class="form-control"></td>
+                            <td><input name="foil_type" value="${f.foil_type}" class="form-control"></td>
+                            <td><input name="length_in" value="${f.length_in}" class="form-control"></td>
+                            <td><input name="breadth_in" value="${f.breadth_in}" class="form-control"></td>
+                            <td><input name="quantity" value="${f.quantity}" class="form-control"></td>
+                            <td><input name="price" value="${f.price}" class="form-control"></td>
+                            <td>
+                                <button class="btn btn-sm btn-primary mb-1">Update</button>
+                        </form>
+
+                        <form method="post" action="/admin/foil/delete/${f.id}" style="display:inline;">
+                            <button class="btn btn-sm btn-danger"
+                                onclick="return confirm('Delete this foil?')">
+                                Delete
+                            </button>
+                        </form>
+                            </td>
+                    </tr>
+                `;
+            });
+        });
+});
+</script>
 {% endblock %}

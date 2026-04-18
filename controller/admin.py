@@ -149,3 +149,30 @@ def add_foil_inline():
 
     flash("Foil added", "success")
     return redirect(url_for("admin.view_foils"))
+
+
+from flask import jsonify, request
+
+@admin_bp.route("/foils/search")
+@login_required
+@role_required("Admin")
+def search_foils():
+    query = request.args.get("q", "")
+
+    foils = Foil.query.filter(
+        Foil.foil_code.ilike(f"%{query}%")
+    ).all()
+
+    result = []
+    for f in foils:
+        result.append({
+            "id": f.id,
+            "foil_code": f.foil_code,
+            "foil_type": f.foil_type,
+            "length_in": f.length_in,
+            "breadth_in": f.breadth_in,
+            "quantity": f.quantity,
+            "price": f.price
+        })
+
+    return jsonify(result)
