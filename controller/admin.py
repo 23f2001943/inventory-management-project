@@ -297,3 +297,11 @@ def use_inventory():
     db.session.commit()
 
     return jsonify({"message": "Inventory updated"})
+
+
+@admin_bp.route("/orders/history")
+@login_required
+@role_required("Admin")
+def order_history():
+    orders = Order.query.order_by(Order.created_at.desc()).all()
+    return render_template("admin/order_history.html", orders=orders)

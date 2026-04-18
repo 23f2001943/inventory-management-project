@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <!-- Top Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-dark">
+            ← Back
+        </a>
+    </div>
+
+    <!-- Page Title -->
+    <div class="page-title">Order History</div>
+
+    <!-- Table -->
+    <div class="glass-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Date</th>
+                    <th>Item Code</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for order in orders %}
+                    {% for item in order.items %}
+                    <tr>
+                        <td>{{ order.id }}</td>
+                        <td>{{ order.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
+                        <td>{{ item.code }}</td>
+                        <td>{{ item.item_type }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.price }}</td>
+                        <td>{{ item.quantity * item.price }}</td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}
