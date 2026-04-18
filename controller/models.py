@@ -87,3 +87,31 @@ class Accessory(db.Model):
 
     quantity = db.Column(db.Integer, default=0)
     price = db.Column(db.Float, nullable=False)
+
+
+class Order(db.Model):
+    __tablename__ = "orders"
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    items = db.relationship("OrderItem", backref="order", cascade="all, delete-orphan")
+
+class OrderItem(db.Model):
+    __tablename__ = "order_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    order_id = db.Column(db.Integer, db.ForeignKey("orders.id"))
+
+    # 🔹 TYPE (Foil / Board / Accessory)
+    item_type = db.Column(db.String(50), nullable=False)
+
+    # 🔹 ACTUAL ITEM REFERENCE
+    item_id = db.Column(db.Integer, nullable=False)
+
+    # 🔹 DISPLAY DATA (snapshot)
+    code = db.Column(db.String(50))
+    
+    quantity = db.Column(db.Integer)
+    price = db.Column(db.Float)

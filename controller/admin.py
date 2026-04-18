@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from controller.decorators import login_required, role_required
-from controller.models import Foil, Board, Accessory, db
+from controller.models import Foil, Board, Accessory, db, Order, OrderItem
+
 
 import pandas as pd
 
@@ -220,3 +221,58 @@ def bulk_delete_foils():
 
     flash(f"{len(ids)} foils deleted successfully", "success")
     return redirect(url_for("admin.view_foils"))
+
+
+
+@admin_bp.route("/orders/create", methods=["POST"])
+@login_required
+@role_required("Admin")
+def create_order():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No data received"}), 400
+
+    # ✅ Create Order
+    order = Order()
+    db.session.add(order)
+    db.session.flush()  # get order.id without commit
+
+    # ✅ Create Order Items
+    for item in data:
+        order_item = OrderItem(
+            order_id=order.id,
+            item_type="foil",  # TEMP (we'll improve later)
+            item_id=item.get("item_id"),         # TEMP (will replace with autocomplete)
+            code=item.get("code"),
+            quantity=int(item.get("quantity", 0)),
+            price=float(item.get("price", 0))
+        )
+
+        db.session.add(order_item)
+
+    # ✅ Commit everything
+    db.session.commit()
+
+    print("Order Saved:", order.id)
+
+    return jsonify({"message": "Order saved successfully"})
+
+@admin_bp.route("/items/search")
+@login_required
+@role_required("Admin")
+def search_items():
+    q = request.args.get("q", "")
+
+    foils = Foil.query.filter(Foil.foil_code.ilike(f"%{q}%")).limit(10).all()
+
+    results = []
+    for f in foils:
+        results.append({
+            "id": f.id,
+            "label": f"{f.foil_code} ({f.foil_type})",
+            "price": f.price,
+            "type": "foil"
+        })
+
+    return jsonify(results)

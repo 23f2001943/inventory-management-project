@@ -14,6 +14,9 @@
     </a>
 
     <div>
+        <button class="btn btn-warning" onclick="toggleOrderBox()">
+    🧾 Order
+</button>
         <button class="btn btn-success"
             onclick="document.getElementById('add-row').style.display='table-row'">
             + Add Foil
@@ -42,6 +45,37 @@
     class="form-control mb-3"
     style="max-width: 300px;"
 >
+
+<div id="orderBox" style="display:none; margin-bottom:20px;" class="glass-table">
+    
+    <table style="width:100%;">
+        <thead>
+            <tr>
+                <th>Sr. No</th>
+                <th>Code</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+
+        <tbody id="orderTableBody">
+            <!-- rows will be added dynamically -->
+        </tbody>
+    </table>
+    <div style="display:flex; justify-content:space-between; margin-top:10px;">
+    
+    <!-- ✅ SUBMIT BUTTON -->
+    <button type="button" class="btn btn-primary" onclick="submitOrder()">
+        Submit Order
+    </button>
+
+    <!-- ADD ROW BUTTON -->
+    <button class="btn btn-success" onclick="addOrderRow()"> + </button>
+
+</div>
+
+</div>
     
     <form id="bulkForm" method="POST" action="{{ url_for('admin.bulk_update_foils') }}">
 <div class="glass-table">
@@ -116,6 +150,87 @@
 const searchInput = document.getElementById("searchInput");
 const tableBody = document.getElementById("foilTableBody");
 
+function submitOrder() {
+    const rows = document.querySelectorAll("#orderTableBody tr");
+
+    let orderData = [];
+
+    rows.forEach(row => {
+        const item_id = row.querySelector(".order-item-id")?.value;
+const code = row.querySelector(".order-search")?.value;
+        const qty = row.querySelector(".order-qty")?.value;
+        const price = row.querySelector(".order-price")?.value;
+
+        if (!code || !qty) return;
+
+        orderData.push({
+    item_id: item_id,
+    code: code,
+    quantity: qty,
+    price: price
+});
+    });
+
+    if (orderData.length === 0) {
+        alert("No items in order");
+        return;
+    }
+
+    fetch("/admin/orders/create", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(orderData)
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert("Order submitted successfully");
+
+        // clear table
+        document.getElementById("orderTableBody").innerHTML = "";
+    });
+}
+
+function toggleOrderBox() {
+    const box = document.getElementById("orderBox");
+    box.style.display = box.style.display === "none" ? "block" : "none";
+}
+
+function addOrderRow() {
+    const tbody = document.getElementById("orderTableBody");
+    const rowCount = tbody.children.length + 1;
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td class="order-sr">${rowCount}</td>
+
+        <td style="position:relative;">
+    <input class="form-control order-search" placeholder="Search item...">
+    <input type="hidden" class="order-item-id">
+    <div class="autocomplete-list"></div>
+</td>
+
+        <td><input type="number" class="form-control order-qty"></td>
+
+        <td><input type="number" class="form-control order-price"></td>
+
+        <td class="order-amount">0</td>
+    `;
+
+    tbody.appendChild(row);
+    updateOrderSerials();
+}
+
+function updateOrderSerials() {
+    const rows = document.querySelectorAll("#orderTableBody tr");
+
+    rows.forEach((row, index) => {
+        row.querySelector(".order-sr").innerText = index + 1;
+    });
+}
+
 function updateAmounts() {
     const rows = document.querySelectorAll("#foilTableBody tr");
 
@@ -163,14 +278,68 @@ function addFoil() {
     });
 }
 document.addEventListener("input", function(e) {
+
+    // 🔹 INVENTORY TABLE (existing)
     if (e.target.name === "quantity[]" || e.target.name === "price[]" ||
         e.target.name === "quantity" || e.target.name === "price") {
         updateAmounts();
     }
+
+    // 🔹 ORDER TABLE (new)
+    if (e.target.classList.contains("order-qty") || 
+        e.target.classList.contains("order-price")) {
+
+        const row = e.target.closest("tr");
+
+        const qty = parseFloat(row.querySelector(".order-qty").value) || 0;
+        const price = parseFloat(row.querySelector(".order-price").value) || 0;
+
+        row.querySelector(".order-amount").innerText = (qty * price).toFixed(2);
+    }
+
+    // 🔹 AUTOCOMPLETE
+if (e.target.classList.contains("order-search")) {
+
+    const input = e.target;
+    const query = input.value;
+
+    if (query.length < 1) return;
+
+    fetch(`/admin/items/search?q=${query}`)
+        .then(res => res.json())
+        .then(data => {
+
+            let list = input.parentElement.querySelector(".autocomplete-list");
+            list.innerHTML = "";
+
+            data.forEach(item => {
+                let option = document.createElement("div");
+                option.innerText = item.label;
+                option.style.padding = "5px";
+                option.style.cursor = "pointer";
+
+                option.onclick = () => {
+                    input.value = item.label;
+
+                    const row = input.closest("tr");
+                    row.querySelector(".order-item-id").value = item.id;
+                    row.querySelector(".order-price").value = item.price;
+
+                    const qty = parseFloat(row.querySelector(".order-qty").value) || 0;
+                    row.querySelector(".order-amount").innerText = (qty * item.price).toFixed(2);
+
+                    list.innerHTML = "";
+                };
+
+                list.appendChild(option);
+            });
+        });
+}
 });
 
 document.addEventListener("DOMContentLoaded", function() {
     updateSerialNumbers();
+     updateAmounts(); 
 });
 
 function updateSerialNumbers() {
