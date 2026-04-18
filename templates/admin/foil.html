@@ -13,7 +13,12 @@
         ← Back
     </a>
 
+
     <div>
+        <button class="btn btn-danger" onclick="toggleUsedBox()">
+    📦 Used Inventory
+</button>
+
         <button class="btn btn-warning" onclick="toggleOrderBox()">
     🧾 Order
 </button>
@@ -45,6 +50,28 @@
     class="form-control mb-3"
     style="max-width: 300px;"
 >
+<div id="usedBox" style="display:none; margin-bottom:20px;" class="glass-table">
+
+    <table style="width:100%;">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Quantity Used</th>
+            </tr>
+        </thead>
+
+        <tbody id="usedTableBody"></tbody>
+    </table>
+
+    <div style="display:flex; justify-content:space-between; margin-top:10px;">
+        <button type="button" class="btn btn-primary" onclick="submitUsedInventory()">
+            Submit
+        </button>
+
+        <button type="button" class="btn btn-success" onclick="addUsedRow()"> + </button>
+    </div>
+
+</div>
 
 <div id="orderBox" style="display:none; margin-bottom:20px;" class="glass-table">
     
@@ -150,6 +177,26 @@
 const searchInput = document.getElementById("searchInput");
 const tableBody = document.getElementById("foilTableBody");
 
+function addUsedRow() {
+    const tbody = document.getElementById("usedTableBody");
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td style="position:relative;">
+            <input class="form-control used-search" placeholder="Search item...">
+            <input type="hidden" class="used-item-id">
+            <div class="autocomplete-list"></div>
+        </td>
+
+        <td>
+            <input type="number" class="form-control used-qty">
+        </td>
+    `;
+
+    tbody.appendChild(row);
+}
+
 function submitOrder() {
     const rows = document.querySelectorAll("#orderTableBody tr");
 
@@ -190,6 +237,17 @@ const code = row.querySelector(".order-search")?.value;
         // clear table
         document.getElementById("orderTableBody").innerHTML = "";
     });
+}
+
+
+function toggleUsedBox() {
+    const box = document.getElementById("usedBox");
+
+    if (box.style.display === "none" || box.style.display === "") {
+        box.style.display = "block";
+    } else {
+        box.style.display = "none";
+    }
 }
 
 function toggleOrderBox() {
@@ -298,7 +356,8 @@ document.addEventListener("input", function(e) {
     }
 
     // 🔹 AUTOCOMPLETE
-if (e.target.classList.contains("order-search")) {
+if (e.target.classList.contains("order-search") || 
+    e.target.classList.contains("used-search")) {
 
     const input = e.target;
     const query = input.value;
@@ -319,17 +378,29 @@ if (e.target.classList.contains("order-search")) {
                 option.style.cursor = "pointer";
 
                 option.onclick = () => {
-                    input.value = item.label;
+    input.value = item.label;
 
-                    const row = input.closest("tr");
-                    row.querySelector(".order-item-id").value = item.id;
-                    row.querySelector(".order-price").value = item.price;
+    const row = input.closest("tr");
 
-                    const qty = parseFloat(row.querySelector(".order-qty").value) || 0;
-                    row.querySelector(".order-amount").innerText = (qty * item.price).toFixed(2);
+    // ✅ Used Inventory
+    if (row.querySelector(".used-item-id")) {
+        row.querySelector(".used-item-id").value = item.id;
+    }
 
-                    list.innerHTML = "";
-                };
+    // ✅ Order Table
+    if (row.querySelector(".order-item-id")) {
+        row.querySelector(".order-item-id").value = item.id;
+    }
+
+    if (row.querySelector(".order-price")) {
+        row.querySelector(".order-price").value = item.price;
+
+        const qty = parseFloat(row.querySelector(".order-qty").value) || 0;
+        row.querySelector(".order-amount").innerText = (qty * item.price).toFixed(2);
+    }
+
+    list.innerHTML = "";
+};
 
                 list.appendChild(option);
             });
@@ -337,6 +408,44 @@ if (e.target.classList.contains("order-search")) {
 }
 });
 
+
+function submitUsedInventory() {
+    const rows = document.querySelectorAll("#usedTableBody tr");
+
+    let data = [];
+
+    rows.forEach(row => {
+        const item_id = row.querySelector(".used-item-id")?.value;
+        const qty = row.querySelector(".used-qty")?.value;
+
+        if (!item_id || !qty) return;
+
+        data.push({
+            item_id: item_id,
+            quantity: qty
+        });
+    });
+
+    if (data.length === 0) {
+        alert("No data entered");
+        return;
+    }
+
+    fetch("/admin/inventory/use", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(() => {
+        alert("Inventory updated");
+
+        // reload page to reflect changes
+        location.reload();
+    });
+}
 document.addEventListener("DOMContentLoaded", function() {
     updateSerialNumbers();
      updateAmounts(); 

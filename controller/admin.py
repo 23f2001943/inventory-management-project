@@ -276,3 +276,24 @@ def search_items():
         })
 
     return jsonify(results)
+
+@admin_bp.route("/inventory/use", methods=["POST"])
+@login_required
+@role_required("Admin")
+def use_inventory():
+    data = request.get_json()
+
+    print("USED INVENTORY:", data)  # 👈 IMPORTANT
+
+    for item in data:
+        item_id = item.get("item_id")
+        used_qty = int(item.get("quantity", 0))
+
+        foil = Foil.query.get(item_id)
+
+        if foil:
+            foil.quantity = max(0, foil.quantity - used_qty)
+
+    db.session.commit()
+
+    return jsonify({"message": "Inventory updated"})
