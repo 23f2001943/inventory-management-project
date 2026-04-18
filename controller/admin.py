@@ -60,6 +60,33 @@ def view_foils():
     foils = Foil.query.all()
     return render_template("admin/foil.html", foils=foils)
 
+@admin_bp.route("/foils/bulk-update", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_update_foils():
+    ids = request.form.getlist("id[]")
+    codes = request.form.getlist("foil_code[]")
+    types = request.form.getlist("foil_type[]")
+    lengths = request.form.getlist("length_in[]")
+    breadths = request.form.getlist("breadth_in[]")
+    quantities = request.form.getlist("quantity[]")
+    prices = request.form.getlist("price[]")
+
+    for i in range(len(ids)):
+        foil = Foil.query.get(ids[i])
+        if foil:
+            foil.foil_code = codes[i]
+            foil.foil_type = types[i]
+            foil.length_in = lengths[i]
+            foil.breadth_in = breadths[i]
+            foil.quantity = quantities[i]
+            foil.price = prices[i]
+
+    db.session.commit()
+
+    flash("All changes saved successfully", "success")
+    return redirect(url_for("admin.view_foils"))
+
 @admin_bp.route("/foil/edit/<int:foil_id>", methods=["GET", "POST"])
 @login_required
 @role_required("Admin")

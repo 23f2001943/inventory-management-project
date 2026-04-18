@@ -7,16 +7,24 @@
 {% include "partials/navbar.html" %}
 
 <div class="dashboard-container">
-    <!-- Top Bar -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-dark">
-            ← Back
-        </a>
+    <!-- TOP BAR -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-dark">
+        ← Back
+    </a>
 
-        <button class="btn btn-success" onclick="document.getElementById('add-row').style.display='table-row'">
+    <div>
+        <button class="btn btn-success"
+            onclick="document.getElementById('add-row').style.display='table-row'">
             + Add Foil
         </button>
+
+        <!-- ✅ NEW BULK SAVE BUTTON -->
+        <button form="bulkForm" class="btn btn-primary">
+            💾 Save All Changes
+        </button>
     </div>
+</div>
 
     <div class="page-title">Foils Inventory</div>
 
@@ -29,65 +37,70 @@
     style="max-width: 300px;"
 >
     
-    <div class="glass-table">
-        <table>
-            <thead>
-                <tr>
-                    <th>Code</th>
-                    <th>Type</th>
-                    <th>Length</th>
-                    <th>Breadth</th>
-                    <th>Qty</th>
-                    <th>Price</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
+    <form id="bulkForm" method="POST" action="{{ url_for('admin.bulk_update_foils') }}">
+<div class="glass-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Type</th>
+                <th>Length</th>
+                <th>Breadth</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Action</th>
+            </tr>
+        </thead>
 
-            <tbody id="foilTableBody">
+        <tbody id="foilTableBody">
 
-                <!-- ADD ROW (HIDDEN INITIALLY) -->
-                <tr id="add-row" style="display:none;">
-                    <form method="post" action="{{ url_for('admin.add_foil_inline') }}">
-                        <td><input name="foil_code" class="form-control" required></td>
-                        <td><input name="foil_type" class="form-control" required></td>
-                        <td><input name="length_in" type="number" step="0.01" class="form-control" required></td>
-                        <td><input name="breadth_in" type="number" step="0.01" class="form-control" required></td>
-                        <td><input name="quantity" type="number" class="form-control" required></td>
-                        <td><input name="price" type="number" step="0.01" class="form-control" required></td>
-                        <td>
-                            <button class="btn btn-sm btn-success">Add</button>
-                        </td>
-                    </form>
-                </tr>
+            <!-- ADD ROW -->
+            <tr id="add-row" style="display:none;">
+                <form method="post" action="{{ url_for('admin.add_foil_inline') }}">
+                    <td><input name="foil_code" class="form-control"></td>
+                    <td><input name="foil_type" class="form-control"></td>
+                    <td><input name="length_in" type="number" step="0.01" class="form-control"></td>
+                    <td><input name="breadth_in" type="number" step="0.01" class="form-control"></td>
+                    <td><input name="quantity" type="number" class="form-control"></td>
+                    <td><input name="price" type="number" step="0.01" class="form-control"></td>
+                    <td>
+                        <button class="btn btn-sm btn-success">Add</button>
+                    </td>
+                </form>
+            </tr>
 
-                <!-- EXISTING FOILS -->
-                {% for foil in foils %}
-                <tr>
-                    <form method="post" action="{{ url_for('admin.update_foil', foil_id=foil.id) }}">
-                        <td><input name="foil_code" value="{{ foil.foil_code }}" class="form-control"></td>
-                        <td><input name="foil_type" value="{{ foil.foil_type }}" class="form-control"></td>
-                        <td><input name="length_in" type="number" step="0.01" value="{{ foil.length_in }}" class="form-control"></td>
-                        <td><input name="breadth_in" type="number" step="0.01" value="{{ foil.breadth_in }}" class="form-control"></td>
-                        <td><input name="quantity" type="number" value="{{ foil.quantity }}" class="form-control"></td>
-                        <td><input name="price" type="number" step="0.01" value="{{ foil.price }}" class="form-control"></td>
-                        <td>
-                            <button class="btn btn-sm btn-primary mb-1">Update</button>
-                    </form>
+            {% for foil in foils %}
+            <tr>
+                <!-- IMPORTANT: hidden id -->
+                <input type="hidden" name="id[]" value="{{ foil.id }}">
 
+                <td><input name="foil_code[]" value="{{ foil.foil_code }}" class="form-control"></td>
+                <td><input name="foil_type[]" value="{{ foil.foil_type }}" class="form-control"></td>
+                <td><input name="length_in[]" type="number" step="0.01" value="{{ foil.length_in }}" class="form-control"></td>
+                <td><input name="breadth_in[]" type="number" step="0.01" value="{{ foil.breadth_in }}" class="form-control"></td>
+                <td><input name="quantity[]" type="number" value="{{ foil.quantity }}" class="form-control"></td>
+                <td><input name="price[]" type="number" step="0.01" value="{{ foil.price }}" class="form-control"></td>
+
+                <td>
+                    <!-- ❌ removed update button -->
+                    
+                    <!-- delete stays separate -->
                     <form method="post"
                           action="{{ url_for('admin.delete_foil', foil_id=foil.id) }}"
                           style="display:inline;">
                         <button class="btn btn-sm btn-danger"
-                                onclick="return confirm('Delete this foil?')">
+                            onclick="return confirm('Delete this foil?')">
                             Delete
                         </button>
                     </form>
-                        </td>
-                </tr>
-                {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
 
-            </tbody>
-        </table>
+        </tbody>
+    </table>
+</div>
+</form>
     </div>
 
 </div>
