@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <!-- TOP BAR -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-dark">
+            ← Back
+        </a>
+
+        <div>
+            <button class="btn btn-success" onclick="addBoardRow()">+ Add Board</button>
+
+            <button form="boardForm" class="btn btn-primary">
+                💾 Save All
+            </button>
+
+            <button class="btn btn-danger" onclick="deleteSelectedBoards()">
+                🗑 Delete Selected
+            </button>
+        </div>
+    </div>
+
+    <div class="page-title">Boards Inventory</div>
+
+    <form id="boardForm" method="POST" action="{{ url_for('admin.bulk_update_boards') }}">
+
+        <div class="glass-table">
+            <table>
+                <thead>
+                    <tr>
+                        
+
+                        <th>Sr. No</th>
+                        <th>Name</th>
+                        <th>Dimension (A × B)</th>
+                        <th>Price (per sq.in)</th>
+                        <th>Amount</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+
+                <tbody id="boardTableBody">
+
+                    {% for b in boards %}
+                    <tr>
+                        
+
+                        <td class="sr-no">{{ loop.index }}</td>
+
+                        <input type="hidden" name="id[]" value="{{ b.id }}">
+
+                        <td>
+                            <input name="name[]" value="{{ b.name }}" class="form-control">
+                        </td>
+
+                        <td>
+                            <input 
+                                name="dimension[]" 
+                                value="{{ b.length }}*{{ b.breadth }}" 
+                                placeholder="e.g. 8*8" 
+                                class="form-control dimension">
+                        </td>
+
+                        <td>
+                            <input name="price[]" value="{{ b.price }}" class="form-control price">
+                        </td>
+
+                        <td class="amount">
+                            {{ b.length * b.breadth * b.price }}
+                        </td>
+
+                        <td>
+                            <input type="checkbox" name="selected_ids[]" value="{{ b.id }}">
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+            </table>
+        </div>
+
+    </form>
+</div>
+
+<script>
+
+// ➕ ADD ROW
+function addBoardRow() {
+    const tbody = document.getElementById("boardTableBody");
+    const rowCount = tbody.children.length + 1;
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td class="sr-no">${rowCount}</td>
+
+        <td><input name="name[]" class="form-control"></td>
+
+        <td>
+            <input name="dimension[]" placeholder="e.g. 8*8" class="form-control dimension">
+        </td>
+
+        <td><input name="price[]" class="form-control price"></td>
+
+        <td class="amount">0</td>
+
+        <td></td>
+    `;
+
+    tbody.appendChild(row);
+}
+
+// 🔄 AUTO AMOUNT CALCULATION
+document.addEventListener("input", function(e) {
+
+    if (e.target.classList.contains("dimension") || 
+        e.target.classList.contains("price")) {
+
+        const row = e.target.closest("tr");
+
+        const dim = row.querySelector(".dimension").value;
+        const price = parseFloat(row.querySelector(".price").value) || 0;
+
+        let area = 0;
+
+        if (dim.includes("*")) {
+            const parts = dim.split("*");
+
+            if (parts.length === 2) {
+                const a = parseFloat(parts[0]) || 0;
+                const b = parseFloat(parts[1]) || 0;
+                area = a * b;
+            }
+        }
+
+        row.querySelector(".amount").innerText = (area * price).toFixed(2);
+    }
+});
+
+
+// 🔢 SERIAL UPDATE
+function updateBoardSerials() {
+    const rows = document.querySelectorAll("#boardTableBody tr");
+
+    rows.forEach((row, index) => {
+        row.querySelector(".sr-no").innerText = index + 1;
+    });
+}
+
+
+// 🗑 DELETE
+function deleteSelectedBoards() {
+    const checked = document.querySelectorAll("input[name='selected_ids[]']:checked");
+
+    if (checked.length === 0) {
+        alert("Select at least one row");
+        return;
+    }
+
+    if (!confirm("Delete selected boards?")) return;
+
+    const form = document.getElementById("boardForm");
+    form.action = "{{ url_for('admin.bulk_delete_boards') }}";
+    form.submit();
+}
+
+</script>
+
+{% endblock %}

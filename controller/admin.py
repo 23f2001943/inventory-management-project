@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from controller.decorators import login_required, role_required
-from controller.models import Foil, Board, Accessory, db, Order, OrderItem
+from controller.models import Foil, Board, Accessory, db, Order, OrderItem, Paint
 
 
 import pandas as pd
@@ -305,3 +305,156 @@ def use_inventory():
 def order_history():
     orders = Order.query.order_by(Order.created_at.desc()).all()
     return render_template("admin/order_history.html", orders=orders)
+
+@admin_bp.route("/paints")
+@login_required
+@role_required("Admin")
+def view_paints():
+    paints = Paint.query.all()   # if model exists
+    return render_template("admin/paint.html", paints=paints)
+
+@admin_bp.route("/paints/bulk-update", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_update_paints():
+
+    ids = request.form.getlist("id[]")
+    names = request.form.getlist("name[]")
+    quantities = request.form.getlist("quantity[]")
+    prices = request.form.getlist("price[]")
+
+    for i in range(len(names)):
+
+        # ✅ Existing paint
+        if i < len(ids) and ids[i]:
+            paint = Paint.query.get(ids[i])
+            if paint:
+                paint.name = names[i]
+                paint.quantity = quantities[i]
+                paint.price = prices[i]
+
+        # ✅ New paint
+        else:
+            new_paint = Paint(
+                name=names[i],
+                quantity=quantities[i],
+                price=prices[i]
+            )
+            db.session.add(new_paint)
+
+    db.session.commit()
+
+    flash("Paints updated successfully", "success")
+    return redirect(url_for("admin.view_paints"))
+
+@admin_bp.route("/paints/bulk-delete", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_delete_paints():
+
+    ids = request.form.getlist("selected_ids[]")
+
+    for id in ids:
+        paint = Paint.query.get(id)
+        if paint:
+            db.session.delete(paint)
+
+    db.session.commit()
+
+    flash(f"{len(ids)} paints deleted", "success")
+    return redirect(url_for("admin.view_paints"))
+
+@admin_bp.route("/paints/search")
+@login_required
+@role_required("Admin")
+def search_paints():
+
+    q = request.args.get("q", "")
+
+    paints = Paint.query.filter(
+        Paint.name.ilike(f"%{q}%")
+    ).all()
+
+    result = []
+
+    for p in paints:
+        result.append({
+            "id": p.id,
+            "name": p.name,
+            "quantity": p.quantity,
+            "price": p.price
+        })
+
+    return jsonify(result)
+
+@admin_bp.route("/boards")
+@login_required
+@role_required("Admin")
+def view_boards():
+    boards = Board.query.all()
+    return render_template("admin/boards.html", boards=boards)
+
+@admin_bp.route("/boards/bulk-update", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_update_boards():
+
+    ids = request.form.getlist("id[]")
+    names = request.form.getlist("name[]")
+    dimensions = request.form.getlist("dimension[]")
+    prices = request.form.getlist("price[]")
+
+    for i in range(len(names)):
+
+        dim = dimensions[i]
+
+        length = 0
+        breadth = 0
+
+        if "*" in dim:
+            parts = dim.split("*")
+            if len(parts) == 2:
+                try:
+                    length = float(parts[0])
+                    breadth = float(parts[1])
+                except:
+                    length = 0
+                    breadth = 0
+
+        if i < len(ids) and ids[i]:
+            board = Board.query.get(ids[i])
+            if board:
+                board.name = names[i]
+                board.length = length
+                board.breadth = breadth
+                board.price = prices[i]
+        else:
+            new_board = Board(
+                name=names[i],
+                length=length,
+                breadth=breadth,
+                price=prices[i]
+            )
+            db.session.add(new_board)
+
+    db.session.commit()
+
+    flash("Boards updated successfully", "success")
+    return redirect(url_for("admin.view_boards"))
+
+@admin_bp.route("/boards/bulk-delete", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_delete_boards():
+
+    ids = request.form.getlist("selected_ids[]")
+
+    for id in ids:
+        board = Board.query.get(id)
+        if board:
+            db.session.delete(board)
+
+    db.session.commit()
+
+    flash(f"{len(ids)} boards deleted", "success")
+    return redirect(url_for("admin.view_boards"))

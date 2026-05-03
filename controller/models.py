@@ -63,19 +63,11 @@ class Foil(db.Model):
     price = db.Column(db.Float, nullable=False)
 
 class Board(db.Model):
-    __tablename__ = "boards"
-
     id = db.Column(db.Integer, primary_key=True)
-
-    board_code = db.Column(db.String(50),  nullable=False)
-    board_type = db.Column(db.String(50), nullable=False)
-
-    length_in = db.Column(db.Float, nullable=False)
-    breadth_in = db.Column(db.Float, nullable=False)
-    thickness_mm = db.Column(db.Float)
-
-    quantity = db.Column(db.Integer, default=0)
-    price = db.Column(db.Float, nullable=False)
+    name = db.Column(db.String(100))
+    length = db.Column(db.Float)
+    breadth = db.Column(db.Float)
+    price = db.Column(db.Float)
 
 class Accessory(db.Model):
     __tablename__ = "accessories"
@@ -113,5 +105,11 @@ class OrderItem(db.Model):
     # 🔹 DISPLAY DATA (snapshot)
     code = db.Column(db.String(50))
     
+    quantity = db.Column(db.Integer)
+    price = db.Column(db.Float)
+
+class Paint(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
     quantity = db.Column(db.Integer)
     price = db.Column(db.Float)

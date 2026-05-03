@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <!-- TOP BAR -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-dark">
+            ← Back
+        </a>
+
+        <div>
+            <button class="btn btn-success"
+                onclick="addPaintRow()">
+                + Add Paint
+            </button>
+
+            <button form="paintForm" class="btn btn-primary">
+                💾 Save All
+            </button>
+
+            <button type="button" class="btn btn-danger"
+                onclick="deleteSelectedPaints()">
+                🗑 Delete Selected
+            </button>
+        </div>
+    </div>
+
+    <div class="page-title">Paint Inventory</div>
+
+    <!-- SEARCH -->
+    <input 
+        type="text" 
+        id="searchInput"
+        placeholder="Search by Paint Name..."
+        class="form-control mb-3"
+        style="max-width: 300px;"
+    >
+
+    <form id="paintForm" method="POST" action="{{ url_for('admin.bulk_update_paints') }}">
+        <div class="glass-table">
+            <table>
+                <thead>
+                    <tr>
+                        
+
+                        <th>Sr. No</th>
+                        <th>Name</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+
+                <tbody id="paintTableBody">
+
+                    {% for paint in paints %}
+                    <tr>
+                        
+
+                        <td class="sr-no">{{ loop.index }}</td>
+
+                        <input type="hidden" name="id[]" value="{{ paint.id }}">
+
+                        <td>
+                            <input name="name[]" value="{{ paint.name }}" class="form-control">
+                        </td>
+
+                        <td>
+                            <input name="quantity[]" type="number" value="{{ paint.quantity }}" class="form-control qty">
+                        </td>
+
+                        <td>
+                            <input name="price[]" type="number" step="0.01" value="{{ paint.price }}" class="form-control price">
+                        </td>
+
+                        <td class="amount">
+                            {{ paint.quantity * paint.price }}
+                        </td>
+
+                        <td>
+                            <input type="checkbox" name="selected_ids[]" value="{{ paint.id }}">
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+            </table>
+        </div>
+    </form>
+
+</div>
+
+<script>
+
+// ➕ ADD NEW ROW
+function addPaintRow() {
+    const tbody = document.getElementById("paintTableBody");
+    const rowCount = tbody.children.length + 1;
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td class="sr-no">${rowCount}</td>
+
+        <td>
+            <input name="name[]" class="form-control">
+        </td>
+
+        <td>
+            <input name="quantity[]" type="number" class="form-control qty">
+        </td>
+
+        <td>
+            <input name="price[]" type="number" class="form-control price">
+        </td>
+
+        <td class="amount">0</td>
+
+        <td></td>
+    `;
+
+    tbody.appendChild(row);
+}
+
+// 🔄 AUTO AMOUNT CALCULATION
+document.addEventListener("input", function(e) {
+
+    if (e.target.classList.contains("qty") || 
+        e.target.classList.contains("price")) {
+
+        const row = e.target.closest("tr");
+
+        const qty = parseFloat(row.querySelector(".qty").value) || 0;
+        const price = parseFloat(row.querySelector(".price").value) || 0;
+
+        row.querySelector(".amount").innerText = (qty * price).toFixed(2);
+    }
+});
+
+
+// 🔢 SERIAL UPDATE
+function updateSerialNumbers() {
+    const rows = document.querySelectorAll("#paintTableBody tr");
+
+    let count = 1;
+
+    rows.forEach(row => {
+        const cell = row.querySelector(".sr-no");
+        if (cell) {
+            cell.innerText = count++;
+        }
+    });
+}
+
+
+// 🗑 DELETE SELECTED
+function deleteSelectedPaints() {
+    const checked = document.querySelectorAll("input[name='selected_ids[]']:checked");
+
+    if (checked.length === 0) {
+        alert("Select at least one row");
+        return;
+    }
+
+    if (!confirm("Delete selected paints?")) return;
+
+    const form = document.getElementById("paintForm");
+    form.action = "{{ url_for('admin.bulk_delete_paints') }}"
+    form.submit();
+}
+
+
+// 🔍 SEARCH
+document.getElementById("searchInput").addEventListener("keyup", function () {
+
+    const query = this.value;
+
+    fetch(`/admin/paints/search?q=${query}`)
+        .then(res => res.json())
+        .then(data => {
+
+            const tableBody = document.getElementById("paintTableBody");
+            tableBody.innerHTML = "";
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align:center;">
+                            ❌ No paints found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            data.forEach(p => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td></td>
+                        <td class="sr-no"></td>
+
+                        <td><input name="name[]" value="${p.name}" class="form-control"></td>
+                        <td><input name="quantity[]" value="${p.quantity}" class="form-control qty"></td>
+                        <td><input name="price[]" value="${p.price}" class="form-control price"></td>
+
+                        <td class="amount"></td>
+
+                        <td>
+                            <input type="checkbox" name="selected_ids[]" value="${p.id}">
+                        </td>
+                    </tr>
+                `;
+            });
+
+            updateSerialNumbers();
+        });
+});
+
+</script>
+
+{% endblock %}
