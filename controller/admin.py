@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from controller.decorators import login_required, role_required
 from controller.models import Foil, Board, Accessory, db, Order, OrderItem, Paint
 
@@ -458,3 +458,158 @@ def bulk_delete_boards():
 
     flash(f"{len(ids)} boards deleted", "success")
     return redirect(url_for("admin.view_boards"))
+
+# =========================
+# VIEW ACCESSORIES
+# =========================
+@admin_bp.route("/accessories")
+@login_required
+@role_required("Admin")
+def view_accessories():
+
+    accessories = Accessory.query.all()
+
+    return render_template(
+        "admin/accessories.html",
+        accessories=accessories
+    )
+
+# =========================
+# BULK UPDATE ACCESSORIES
+# =========================
+@admin_bp.route("/accessories/bulk-update", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_update_accessories():
+
+    ids = request.form.getlist("id[]")
+    names = request.form.getlist("name[]")
+    prices = request.form.getlist("price[]")
+    quantities = request.form.getlist("quantity[]")
+
+    total_rows = len(names)
+
+    for i in range(total_rows):
+
+        name = names[i].strip()
+        price = prices[i]
+        quantity = quantities[i]
+
+        # SKIP EMPTY ROWS
+        if name == "":
+            continue
+
+        # =========================
+        # UPDATE EXISTING
+        # =========================
+        if i < len(ids) and ids[i]:
+
+            accessory = Accessory.query.get(ids[i])
+
+            if accessory:
+
+                # CHECK DUPLICATE NAME
+                existing = Accessory.query.filter(
+                    Accessory.name.ilike(name),
+                    Accessory.id != accessory.id
+                ).first()
+
+                if existing:
+
+                    flash(
+                        f"Accessory '{name}' already exists",
+                        "danger"
+                    )
+
+                    return redirect(
+                        url_for("admin.view_accessories")
+                    )
+
+                accessory.name = name
+                accessory.price = float(price)
+                accessory.quantity = int(quantity)
+
+        # =========================
+        # CREATE NEW
+        # =========================
+        else:
+
+            # CHECK DUPLICATE
+            existing = Accessory.query.filter(
+                Accessory.name.ilike(name)
+            ).first()
+
+            if existing:
+
+                flash(
+                    f"Accessory '{name}' already exists",
+                    "danger"
+                )
+
+                return redirect(
+                    url_for("admin.view_accessories")
+                )
+
+            new_accessory = Accessory(
+                name=name,
+                price=float(price),
+                quantity=int(quantity)
+            )
+
+            db.session.add(new_accessory)
+
+    db.session.commit()
+
+    flash("Accessories updated successfully", "success")
+
+    return redirect(url_for("admin.view_accessories"))
+# =========================
+# BULK DELETE ACCESSORIES
+# =========================
+@admin_bp.route("/accessories/bulk-delete", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_delete_accessories():
+
+    selected_ids = request.form.getlist("selected_ids[]")
+
+    for accessory_id in selected_ids:
+
+        accessory = Accessory.query.get(accessory_id)
+
+        if accessory:
+            db.session.delete(accessory)
+
+    db.session.commit()
+
+    flash("Selected accessories deleted", "danger")
+
+    return redirect(url_for("admin.view_accessories"))
+
+# =========================
+# SEARCH ACCESSORIES
+# =========================
+@admin_bp.route("/accessories/search")
+@login_required
+@role_required("Admin")
+def search_accessories():
+
+    query = request.args.get("q", "")
+
+    accessories = Accessory.query.filter(
+        Accessory.name.ilike(f"%{query}%")
+    ).all()
+
+    result = []
+
+    for accessory in accessories:
+
+        result.append({
+            "id": accessory.id,
+            "name": accessory.name,
+            "price": accessory.price,
+            "quantity": accessory.quantity
+        })
+
+    return jsonify(result)
+

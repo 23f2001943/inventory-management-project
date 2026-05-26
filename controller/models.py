@@ -74,8 +74,8 @@ class Accessory(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    accessory_code = db.Column(db.String(50),  nullable=False)
-    name = db.Column(db.String(100), nullable=False)
+    
+    name = db.Column(db.String(100), nullable=False, unique= True)
 
     quantity = db.Column(db.Integer, default=0)
     price = db.Column(db.Float, nullable=False)

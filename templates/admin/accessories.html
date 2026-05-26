@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <!-- TOP BAR -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-dark">
+            ← Back
+        </a>
+
+        <div>
+            <button class="btn btn-success"
+                onclick="addAccessoryRow()">
+                + Add Accessory
+            </button>
+
+            <button form="accessoryForm" class="btn btn-primary">
+                💾 Save All
+            </button>
+
+            <button type="button"
+                class="btn btn-danger"
+                onclick="deleteSelectedAccessories()">
+                🗑 Delete Selected
+            </button>
+        </div>
+    </div>
+
+    <div class="page-title">Accessories Inventory</div>
+
+    <!-- SEARCH -->
+    <input
+        type="text"
+        id="searchInput"
+        placeholder="Search by Accessory Name..."
+        class="form-control mb-3"
+        style="max-width: 300px;"
+    >
+
+    <form
+        id="accessoryForm"
+        method="POST"
+        action="{{ url_for('admin.bulk_update_accessories') }}"
+    >
+
+        <div class="glass-table">
+
+            <table>
+
+                <thead>
+                    <tr>
+
+                        <th>Sr. No</th>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Delete</th>
+
+                    </tr>
+                </thead>
+
+                <tbody id="accessoryTableBody">
+
+                    {% for accessory in accessories %}
+                    <tr>
+
+                        <td class="sr-no">{{ loop.index }}</td>
+
+                        <input
+                            type="hidden"
+                            name="id[]"
+                            value="{{ accessory.id }}"
+                        >
+
+                        <td>
+                            <input
+                                name="name[]"
+                                value="{{ accessory.name }}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="price[]"
+                                type="number"
+                                step="0.01"
+                                value="{{ accessory.price }}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="quantity[]"
+                                type="number"
+                                value="{{ accessory.quantity }}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                type="checkbox"
+                                name="selected_ids[]"
+                                value="{{ accessory.id }}"
+                            >
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+
+// ➕ ADD NEW ROW
+function addAccessoryRow() {
+
+    const tbody = document.getElementById("accessoryTableBody");
+
+    const rowCount = tbody.children.length + 1;
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+
+        <td class="sr-no">${rowCount}</td>
+
+        <td>
+            <input
+                name="name[]"
+                class="form-control"
+            >
+        </td>
+
+        <td>
+            <input
+                name="price[]"
+                type="number"
+                step="0.01"
+                class="form-control"
+            >
+        </td>
+
+        <td>
+            <input
+                name="quantity[]"
+                type="number"
+                class="form-control"
+            >
+        </td>
+
+        <td></td>
+    `;
+
+    tbody.appendChild(row);
+}
+
+
+// 🔢 UPDATE SERIAL NUMBERS
+function updateSerialNumbers() {
+
+    const rows = document.querySelectorAll("#accessoryTableBody tr");
+
+    let count = 1;
+
+    rows.forEach(row => {
+
+        const cell = row.querySelector(".sr-no");
+
+        if (cell) {
+            cell.innerText = count++;
+        }
+    });
+}
+
+
+// 🗑 DELETE SELECTED
+function deleteSelectedAccessories() {
+
+    const checked = document.querySelectorAll(
+        "input[name='selected_ids[]']:checked"
+    );
+
+    if (checked.length === 0) {
+
+        alert("Select at least one accessory");
+
+        return;
+    }
+
+    if (!confirm("Delete selected accessories?")) return;
+
+    const form = document.getElementById("accessoryForm");
+
+    form.action = "{{ url_for('admin.bulk_delete_accessories') }}";
+
+    form.submit();
+}
+
+
+// 🔍 SEARCH
+document.getElementById("searchInput")
+.addEventListener("keyup", function () {
+
+    const query = this.value;
+
+    fetch(`/admin/accessories/search?q=${query}`)
+
+        .then(res => res.json())
+
+        .then(data => {
+
+            const tableBody =
+                document.getElementById("accessoryTableBody");
+
+            tableBody.innerHTML = "";
+
+            if (data.length === 0) {
+
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5"
+                            style="text-align:center;">
+                            ❌ No accessories found
+                        </td>
+                    </tr>
+                `;
+
+                return;
+            }
+
+            data.forEach(a => {
+
+                tableBody.innerHTML += `
+
+                    <tr>
+
+                        <td class="sr-no"></td>
+
+                        <td>
+                            <input
+                                name="name[]"
+                                value="${a.name}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="price[]"
+                                value="${a.price}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="quantity[]"
+                                value="${a.quantity}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                type="checkbox"
+                                name="selected_ids[]"
+                                value="${a.id}"
+                            >
+                        </td>
+
+                    </tr>
+                `;
+            });
+
+            updateSerialNumbers();
+        });
+});
+
+</script>
+
+{% endblock %}
