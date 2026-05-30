@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from controller.decorators import login_required, role_required
-from controller.models import Foil, Board, Accessory, db, Order, OrderItem, Paint, Memento, MementoMaterial, Supplier, SupplierMaterial
+from controller.models import Foil, Board, Accessory, db, Order, OrderItem, Paint, Memento, MementoMaterial, Supplier, SupplierMaterial, MRPOrder
 
 
 import pandas as pd
@@ -1095,3 +1095,60 @@ def save_supplier_materials(supplier_id):
     return redirect(
         url_for("admin.view_suppliers")
     )
+
+# =========================
+# VIEW MRP
+# =========================
+@admin_bp.route("/mrp")
+@login_required
+@role_required("Admin")
+def view_mrp():
+
+    mementos = Memento.query.all()
+
+    orders = MRPOrder.query.order_by(
+        MRPOrder.id.desc()
+    ).all()
+
+    return render_template(
+        "admin/mrp.html",
+        mementos=mementos,
+        orders=orders
+    )
+
+# =========================
+# ADD MRP ORDER
+# =========================
+@admin_bp.route(
+    "/mrp/add-order",
+    methods=["POST"]
+)
+@login_required
+@role_required("Admin")
+def add_mrp_order():
+
+    order = MRPOrder(
+
+        memento_id=
+        request.form.get("memento_id"),
+
+        order_quantity=
+        request.form.get("order_quantity"),
+
+        due_week=
+        request.form.get("due_week")
+    )
+
+    db.session.add(order)
+
+    db.session.commit()
+
+    flash(
+        "MRP Order Added",
+        "success"
+    )
+
+    return redirect(
+        url_for("admin.view_mrp")
+    )
+
