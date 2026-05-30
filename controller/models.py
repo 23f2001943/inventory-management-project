@@ -222,3 +222,34 @@ class SupplierMaterial(db.Model):
     db.Integer,
     default=0
     )
+
+# =========================
+# MRP ORDERS
+# =========================
+class MRPOrder(db.Model):
+    __tablename__ = "mrp_orders"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    memento_id = db.Column(
+        db.Integer,
+        db.ForeignKey("mementos.id")
+    )
+
+    order_quantity = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    due_week = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
