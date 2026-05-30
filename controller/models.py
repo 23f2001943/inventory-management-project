@@ -253,3 +253,7 @@ class MRPOrder(db.Model):
         db.DateTime,
         default=datetime.utcnow
     )
+
+    memento = db.relationship(
+    "Memento"
+)

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <a
+    href="{{ url_for(
+    'admin.view_single_mrp',
+    order_id=order.id
+    ) }}"
+    class="btn btn-dark mb-3">
+
+        ← Back
+
+    </a>
+
+    <div class="page-title">
+
+        MRP Schedule :
+        {{ material_name }}
+
+    </div>
+
+    <div class="glass-table mb-4 p-3">
+
+        <h5>
+
+            Available :
+            {{ available }}
+
+            |
+
+            Safety Stock :
+            {{ safety_stock }}
+
+            |
+
+            Lead Time :
+            {{ lead_time }}
+
+            Weeks
+
+        </h5>
+
+    </div>
+
+    <div class="glass-table">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>MRP Item</th>
+
+                    {% for week in range(1,due_week+1) %}
+
+                    <th>
+
+                        W{{ week }}
+
+                    </th>
+
+                    {% endfor %}
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                <tr>
+
+                    <td>
+
+                        Gross Requirements
+
+                    </td>
+
+                    {% for week in range(1,due_week+1) %}
+
+                    <td>
+
+                        {{ schedule.gross[week] }}
+
+                    </td>
+
+                    {% endfor %}
+
+                </tr>
+
+                <tr>
+
+                    <td>
+
+                        Net Requirements
+
+                    </td>
+
+                    {% for week in range(1,due_week+1) %}
+
+                    <td>
+
+                        {{ schedule.net[week] }}
+
+                    </td>
+
+                    {% endfor %}
+
+                </tr>
+
+                <tr>
+
+                    <td>
+
+                        Planned Order Receipts
+
+                    </td>
+
+                    {% for week in range(1,due_week+1) %}
+
+                    <td>
+
+                        {{ schedule.receipt[week] }}
+
+                    </td>
+
+                    {% endfor %}
+
+                </tr>
+
+                <tr>
+
+                    <td>
+
+                        Planned Order Releases
+
+                    </td>
+
+                    {% for week in range(1,due_week+1) %}
+
+                    <td>
+
+                        {{ schedule.release[week] }}
+
+                    </td>
+
+                    {% endfor %}
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

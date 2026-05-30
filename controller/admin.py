@@ -1113,7 +1113,8 @@ def view_mrp():
     return render_template(
         "admin/mrp.html",
         mementos=mementos,
-        orders=orders
+        orders=orders,
+        selected_order=None
     )
 
 # =========================
@@ -1152,3 +1153,301 @@ def add_mrp_order():
         url_for("admin.view_mrp")
     )
 
+# =========================
+# VIEW SINGLE MRP
+# =========================
+@admin_bp.route("/mrp/order/<int:order_id>")
+@login_required
+@role_required("Admin")
+def view_single_mrp(order_id):
+
+    order = MRPOrder.query.get_or_404(order_id)
+
+    mementos = Memento.query.all()
+
+    orders = MRPOrder.query.order_by(
+        MRPOrder.id.desc()
+    ).all()
+
+    mrp_rows = []
+
+    materials = MementoMaterial.query.filter_by(
+        memento_id=order.memento_id
+    ).all()
+
+    sr_no = 1
+
+    for material in materials:
+
+        need = (
+            material.quantity_used
+            * order.order_quantity
+        )
+
+        material_name = ""
+
+        available = 0
+
+        # =========================
+        # FOIL
+        # =========================
+
+        if material.material_type == "Foil":
+
+            item = Foil.query.get(
+                material.material_id
+            )
+
+            if item:
+
+                material_name = item.foil_code
+
+                available = item.quantity
+
+        # =========================
+        # PAINT
+        # =========================
+
+        elif material.material_type == "Paint":
+
+            item = Paint.query.get(
+                material.material_id
+            )
+
+            if item:
+
+                material_name = item.name
+
+                available = item.quantity
+
+        # =========================
+        # ACCESSORY
+        # =========================
+
+        elif material.material_type == "Accessory":
+
+            item = Accessory.query.get(
+                material.material_id
+            )
+
+            if item:
+
+                material_name = item.name
+
+                available = item.quantity
+
+        # =========================
+        # BOARD
+        # =========================
+
+        elif material.material_type == "Board":
+
+            item = Board.query.get(
+                material.material_id
+            )
+
+            if item:
+
+                material_name = item.name
+
+                available = 999999
+
+        supplier = SupplierMaterial.query.filter_by(
+            item_type=material.material_type,
+            item_name=material_name
+        ).first()
+
+        lead_time = 0
+        safety_stock = 0
+
+        if supplier:
+
+            lead_time = supplier.lead_time
+
+            safety_stock = supplier.safety_stock
+
+        shortage = max(
+            0,
+            need + safety_stock - available
+        )
+
+        order_week = max(
+            1,
+            order.due_week - lead_time
+        )
+
+        mrp_rows.append({
+
+    "material_id":
+        material.id,
+
+    "sr_no":
+        sr_no,
+
+    "material":
+        material_name,
+
+    "need":
+        need,
+
+    "available":
+        available,
+
+    "safety_stock":
+        safety_stock,
+
+    "shortage":
+        shortage,
+
+    "lead_time":
+        lead_time,
+
+    "order_week":
+        order_week
+
+})
+
+        sr_no += 1
+
+    return render_template(
+        "admin/mrp.html",
+        mementos=mementos,
+        orders=orders,
+        selected_order=order,
+        mrp_rows=mrp_rows
+    )
+
+# =========================
+# MATERIAL MRP DETAILS
+# =========================
+@admin_bp.route(
+    "/mrp/order/<int:order_id>/material/<int:material_id>"
+)
+@login_required
+@role_required("Admin")
+def material_mrp_details(
+    order_id,
+    material_id
+):
+
+    order = MRPOrder.query.get_or_404(order_id)
+
+    material = MementoMaterial.query.get_or_404(
+        material_id
+    )
+
+    due_week = order.due_week
+
+    gross_requirement = (
+        material.quantity_used
+        * order.order_quantity
+    )
+
+    available = 0
+    material_name = ""
+
+    if material.material_type == "Foil":
+
+        item = Foil.query.get(
+            material.material_id
+        )
+
+        if item:
+            available = item.quantity
+            material_name = item.foil_code
+
+    elif material.material_type == "Paint":
+
+        item = Paint.query.get(
+            material.material_id
+        )
+
+        if item:
+            available = item.quantity
+            material_name = item.name
+
+    elif material.material_type == "Accessory":
+
+        item = Accessory.query.get(
+            material.material_id
+        )
+
+        if item:
+            available = item.quantity
+            material_name = item.name
+
+    elif material.material_type == "Board":
+
+        item = Board.query.get(
+            material.material_id
+        )
+
+        if item:
+            material_name = item.name
+            available = 999999
+
+    supplier = SupplierMaterial.query.filter_by(
+        item_type=material.material_type,
+        item_name=material_name
+    ).first()
+
+    lead_time = 0
+    safety_stock = 0
+
+    if supplier:
+
+        lead_time = supplier.lead_time
+        safety_stock = supplier.safety_stock
+
+    shortage = max(
+        0,
+        gross_requirement
+        + safety_stock
+        - available
+    )
+
+    release_week = max(
+        1,
+        due_week - lead_time
+    )
+
+    schedule = {
+
+        "gross": {},
+        "net": {},
+        "receipt": {},
+        "release": {}
+    }
+
+    for week in range(1, due_week + 1):
+
+        schedule["gross"][week] = 0
+        schedule["net"][week] = 0
+        schedule["receipt"][week] = 0
+        schedule["release"][week] = 0
+
+    schedule["gross"][due_week] = gross_requirement
+
+    schedule["net"][due_week] = shortage
+
+    schedule["receipt"][due_week] = shortage
+
+    schedule["release"][release_week] = shortage
+
+    return render_template(
+        "admin/mrp_schedule.html",
+
+        order=order,
+
+        material_name=material_name,
+
+        due_week=due_week,
+
+        available=available,
+
+        safety_stock=safety_stock,
+
+        lead_time=lead_time,
+
+        schedule=schedule
+    )

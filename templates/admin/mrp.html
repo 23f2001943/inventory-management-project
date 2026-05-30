@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <!-- BACK BUTTON -->
+
+    <div class="mb-3">
+
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="btn btn-dark">
+
+            ← Back
+
+        </a>
+
+    </div>
+
+    <div class="page-title">
+
+        Material Requirement Planning (MRP)
+
+    </div>
+
+
+    <!-- ADD ORDER -->
+
+    <div class="glass-table p-4 mb-4">
+
+        <h4 class="mb-3">
+
+            Add New Order
+
+        </h4>
+
+        <form method="POST"
+              action="{{ url_for('admin.add_mrp_order') }}">
+
+            <div class="row">
+
+                <div class="col-md-4">
+
+                    <label>
+
+                        Select Memento
+
+                    </label>
+
+                    <select
+                        name="memento_id"
+                        class="form-control"
+                        required>
+
+                        <option value="">
+                            Select
+                        </option>
+
+                        {% for memento in mementos %}
+
+                        <option value="{{ memento.id }}">
+
+                            {{ memento.code }}
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <label>
+
+                        Order Quantity
+
+                    </label>
+
+                    <input
+                        type="number"
+                        name="order_quantity"
+                        class="form-control"
+                        required>
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <label>
+
+                        Due Week
+
+                    </label>
+
+                    <input
+                        type="number"
+                        name="due_week"
+                        min="1"
+                        max="52"
+                        class="form-control"
+                        required>
+
+                </div>
+
+                <div class="col-md-2">
+
+                    <label>&nbsp;</label>
+
+                    <button
+                        type="submit"
+                        class="btn btn-success w-100">
+
+                        Add Order
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+    <!-- ORDERS TABLE -->
+
+    <div class="glass-table mb-4">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Sr. No.</th>
+
+                    <th>Memento</th>
+
+                    <th>Order Qty</th>
+
+                    <th>Due Week</th>
+
+                    <th>MRP</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for order in orders %}
+
+                <tr>
+
+                    <td>
+
+                        {{ loop.index }}
+
+                    </td>
+
+                    <td>
+
+                        {{ order.memento.code }}
+
+                    </td>
+
+                    <td>
+
+                        {{ order.order_quantity }}
+
+                    </td>
+
+                    <td>
+
+                        Week {{ order.due_week }}
+
+                    </td>
+
+                    <td>
+
+                        <a href="{{ url_for('admin.view_single_mrp',
+                                            order_id=order.id) }}"
+                           class="btn btn-primary btn-sm">
+
+                            View
+
+                        </a>
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    {% if selected_order %}
+
+    <div class="glass-table mb-4 p-3">
+
+        <h4>
+
+            MRP For :
+
+            {{ selected_order.memento.code }}
+
+            | Qty :
+
+            {{ selected_order.order_quantity }}
+
+            | Due Week :
+
+            {{ selected_order.due_week }}
+
+        </h4>
+
+    </div>
+
+
+    <!-- MRP TABLE -->
+
+    <div class="glass-table">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Sr. No.</th>
+
+                    <th>Material</th>
+
+                    <th>Need</th>
+
+                    <th>Available</th>
+
+                    <th>Safety Stock</th>
+
+                    <th>Shortage</th>
+
+                    <th>Lead Time</th>
+
+                    <th>Order Week</th>
+
+                    <th>Details</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+{% for row in mrp_rows %}
+
+<tr>
+
+    <td>{{ row.sr_no }}</td>
+
+    <td>{{ row.material }}</td>
+
+    <td>{{ row.need }}</td>
+
+    <td>{{ row.available }}</td>
+
+    <td>{{ row.safety_stock }}</td>
+
+    <td>{{ row.shortage }}</td>
+
+    <td>{{ row.lead_time }}</td>
+
+    <td>Week {{ row.order_week }}</td>
+
+    <td>
+
+        
+
+<a
+href="{{ url_for(
+'admin.material_mrp_details',
+order_id=selected_order.id,
+material_id=row.material_id
+) }}"
+class="btn btn-primary btn-sm">
+
+View
+
+</a>
+
+
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+{% if not mrp_rows %}
+
+<tr>
+
+    <td colspan="9"
+        style="text-align:center">
+
+        No MRP data found
+
+    </td>
+
+</tr>
+
+{% endif %}
+
+</tbody>
+
+        </table>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
