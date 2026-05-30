@@ -80,6 +80,59 @@ class Accessory(db.Model):
     quantity = db.Column(db.Integer, default=0)
     price = db.Column(db.Float, nullable=False)
 
+class Memento(db.Model):
+    __tablename__ = "mementos"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    code = db.Column(
+        db.String(100),
+        nullable=False,
+        unique=True
+    )
+
+    dimension = db.Column(db.String(100), nullable=False)
+
+    price = db.Column(db.Float, nullable=False)
+
+    quantity = db.Column(db.Integer, default=0)
+
+    materials = db.relationship(
+    "MementoMaterial",
+    backref="memento",
+    cascade="all, delete-orphan"
+)
+
+class MementoMaterial(db.Model):
+    __tablename__ = "memento_materials"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # WHICH MEMENTO
+    memento_id = db.Column(
+        db.Integer,
+        db.ForeignKey("mementos.id"),
+        nullable=False
+    )
+
+    # MATERIAL TYPE
+    # Foil / Paint / Accessory / Board
+    material_type = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    # ACTUAL MATERIAL ID
+    material_id = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    # HOW MUCH USED
+    quantity_used = db.Column(
+        db.Float,
+        nullable=False
+    )
 
 class Order(db.Model):
     __tablename__ = "orders"
@@ -113,3 +166,59 @@ class Paint(db.Model):
     name = db.Column(db.String(100))
     quantity = db.Column(db.Integer)
     price = db.Column(db.Float)
+
+
+# =========================
+# SUPPLIER MASTER
+# =========================
+class Supplier(db.Model):
+    __tablename__ = "suppliers"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    supplier_name = db.Column(
+        db.String(100),
+        nullable=False,
+        unique=True
+    )
+
+    materials = db.relationship(
+        "SupplierMaterial",
+        backref="supplier",
+        cascade="all, delete-orphan"
+    )
+
+
+# =========================
+# SUPPLIER MATERIALS
+# =========================
+class SupplierMaterial(db.Model):
+    __tablename__ = "supplier_materials"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    supplier_id = db.Column(
+        db.Integer,
+        db.ForeignKey("suppliers.id"),
+        nullable=False
+    )
+
+    item_type = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    item_name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    lead_time = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    safety_stock = db.Column(
+    db.Integer,
+    default=0
+    )

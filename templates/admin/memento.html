@@ -1,0 +1,766 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <!-- TOP BAR -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="btn btn-dark">
+            ← Back
+        </a>
+
+        <div>
+
+            <button class="btn btn-success"
+                    onclick="addMementoRow()">
+                + Add Memento
+            </button>
+
+            <button form="mementoForm"
+                    class="btn btn-primary">
+                💾 Save All
+            </button>
+
+            <button type="button"
+                    class="btn btn-danger"
+                    onclick="deleteSelectedMementos()">
+                🗑 Delete Selected
+            </button>
+
+        </div>
+    </div>
+
+    <div class="page-title">
+        Mementos Inventory
+    </div>
+
+    <!-- SEARCH -->
+    <input
+        type="text"
+        id="searchInput"
+        placeholder="Search by Code..."
+        class="form-control mb-3"
+        style="max-width:300px;"
+    >
+
+    <form
+        id="mementoForm"
+        method="POST"
+        action="{{ url_for('admin.bulk_update_mementos') }}"
+    >
+
+        <div class="glass-table">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Sr. No</th>
+                        <th>Code</th>
+                        <th>Dimension</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Action</th>
+                        <th>Delete</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="mementoTableBody">
+
+                    {% for memento in mementos %}
+
+                    <tr>
+
+                        <td class="sr-no">
+                            {{ loop.index }}
+                        </td>
+
+                        <input
+                            type="hidden"
+                            name="id[]"
+                            value="{{ memento.id }}"
+                        >
+
+                        <td>
+                            <input
+                                name="code[]"
+                                value="{{ memento.code }}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="dimension[]"
+                                value="{{ memento.dimension }}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="price[]"
+                                value="{{ memento.price }}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="quantity[]"
+                                value="{{ memento.quantity }}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+
+                            <button
+                                type="button"
+                                class="btn btn-info btn-sm"
+                                data-memento-id="{{ memento.id }}"
+                                onclick="openMaterialModal(this.dataset.mementoId)">
+
+                                Details
+
+                            </button>
+
+                        </td>
+
+                        <td>
+
+                            <input
+                                type="checkbox"
+                                name="selected_ids[]"
+                                value="{{ memento.id }}"
+                            >
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<!-- MATERIAL MODAL -->
+<div
+    class="modal fade"
+    id="materialModal"
+    tabindex="-1"
+>
+
+    <div class="modal-dialog modal-xl">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Memento Materials
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <table class="table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Material Type</th>
+                            <th>Material</th>
+                            <th>Quantity Used</th>
+                            <th>Remove</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="materialsTableBody">
+
+                    </tbody>
+
+                </table>
+
+                <button
+                    class="btn btn-success"
+                    type="button"
+                    onclick="addMaterialRow()">
+
+                    + Add Material
+
+                </button>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    class="btn btn-primary"
+                    type="button"
+                    onclick="saveMaterials()">
+
+                    Save Materials
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let currentMementoId = null;
+let materialOptions = null;
+let materialModal = null;
+
+
+// =========================
+// PAGE LOAD
+// =========================
+document.addEventListener("DOMContentLoaded", async function () {
+
+    materialModal = new bootstrap.Modal(
+        document.getElementById("materialModal")
+    );
+
+    const response =
+        await fetch("/admin/materials/options");
+
+    materialOptions =
+        await response.json();
+});
+
+
+// =========================
+// OPEN MODAL
+// =========================
+async function openMaterialModal(mementoId) {
+
+    currentMementoId = mementoId;
+
+    const tbody =
+        document.getElementById(
+            "materialsTableBody"
+        );
+
+    tbody.innerHTML = "";
+
+    const response =
+        await fetch(
+            `/admin/mementos/${mementoId}/materials`
+        );
+
+    const materials =
+        await response.json();
+
+    materials.forEach(material => {
+
+        addMaterialRow(
+            material.material_type,
+            material.material_id,
+            material.quantity_used
+        );
+    });
+
+    materialModal.show();
+}
+
+
+// =========================
+// ADD MATERIAL ROW
+// =========================
+function addMaterialRow(
+    selectedType = "",
+    selectedMaterial = "",
+    quantity = ""
+) {
+
+    const tbody =
+        document.getElementById(
+            "materialsTableBody"
+        );
+
+    const row =
+        document.createElement("tr");
+
+    row.innerHTML = `
+
+        <td>
+
+            <select
+                class="form-control material-type"
+                onchange="updateMaterialDropdown(this)">
+
+                <option value="">
+                    Select Type
+                </option>
+
+                <option value="Foil">
+                    Foil
+                </option>
+
+                <option value="Paint">
+                    Paint
+                </option>
+
+                <option value="Accessory">
+                    Accessory
+                </option>
+
+                <option value="Board">
+                    Board
+                </option>
+
+            </select>
+
+        </td>
+
+        <td>
+
+            <select
+                class="form-control material-dropdown">
+
+                <option value="">
+                    Select Material
+                </option>
+
+            </select>
+
+        </td>
+
+        <td>
+
+            <input
+                type="number"
+                step="0.01"
+                class="form-control quantity-used"
+                value="${quantity}"
+            >
+
+        </td>
+
+        <td>
+
+            <button
+                class="btn btn-danger btn-sm"
+                type="button"
+                onclick="this.closest('tr').remove()">
+
+                X
+
+            </button>
+
+        </td>
+    `;
+
+    tbody.appendChild(row);
+
+    const typeSelect =
+        row.querySelector(".material-type");
+
+    typeSelect.value = selectedType;
+
+    updateMaterialDropdown(
+        typeSelect,
+        selectedMaterial
+    );
+}
+
+
+// =========================
+// UPDATE MATERIAL DROPDOWN
+// =========================
+function updateMaterialDropdown(
+    select,
+    selectedMaterial = ""
+) {
+
+    const row =
+        select.closest("tr");
+
+    const dropdown =
+        row.querySelector(
+            ".material-dropdown"
+        );
+
+    dropdown.innerHTML = "";
+
+    let items = [];
+
+    if (select.value === "Foil") {
+        items = materialOptions.foils;
+    }
+
+    else if (select.value === "Paint") {
+        items = materialOptions.paints;
+    }
+
+    else if (select.value === "Accessory") {
+        items = materialOptions.accessories;
+    }
+
+    else if (select.value === "Board") {
+        items = materialOptions.boards;
+    }
+
+    dropdown.innerHTML =
+        `<option value="">Select Material</option>`;
+
+    items.forEach(item => {
+
+        const option =
+            document.createElement("option");
+
+        option.value = item.id;
+
+        option.textContent = item.name;
+
+        dropdown.appendChild(option);
+    });
+
+    dropdown.value = selectedMaterial;
+}
+
+
+// =========================
+// SAVE MATERIALS
+// =========================
+async function saveMaterials() {
+
+    const rows =
+        document.querySelectorAll(
+            "#materialsTableBody tr"
+        );
+
+    const payload = [];
+
+    rows.forEach(row => {
+
+        const materialType =
+            row.querySelector(
+                ".material-type"
+            ).value;
+
+        const materialId =
+            row.querySelector(
+                ".material-dropdown"
+            ).value;
+
+        const quantityUsed =
+            row.querySelector(
+                ".quantity-used"
+            ).value;
+
+        if (
+            materialType &&
+            materialId &&
+            quantityUsed
+        ) {
+
+            payload.push({
+
+                material_type:
+                    materialType,
+
+                material_id:
+                    materialId,
+
+                quantity_used:
+                    quantityUsed
+            });
+        }
+    });
+
+    const response =
+        await fetch(
+
+            `/admin/mementos/${currentMementoId}/materials/save`,
+
+            {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify(payload)
+            }
+        );
+
+    const result =
+        await response.json();
+
+    alert(result.message);
+
+    materialModal.hide();
+}
+
+
+// =========================
+// ADD MEMENTO ROW
+// =========================
+function addMementoRow() {
+
+    const tbody =
+        document.getElementById(
+            "mementoTableBody"
+        );
+
+    const rowCount =
+        tbody.querySelectorAll("tr").length + 1;
+
+    const row =
+        document.createElement("tr");
+
+    row.innerHTML = `
+
+        <td class="sr-no">
+            ${rowCount}
+        </td>
+
+        <td>
+            <input
+                name="code[]"
+                class="form-control">
+        </td>
+
+        <td>
+            <input
+                name="dimension[]"
+                class="form-control">
+        </td>
+
+        <td>
+            <input
+                name="price[]"
+                class="form-control">
+        </td>
+
+        <td>
+            <input
+                name="quantity[]"
+                class="form-control">
+        </td>
+
+        <td>
+            New Record
+        </td>
+
+        <td></td>
+    `;
+
+    tbody.appendChild(row);
+}
+
+
+// =========================
+// DELETE MEMENTOS
+// =========================
+function deleteSelectedMementos() {
+
+    const checked =
+        document.querySelectorAll(
+            "input[name='selected_ids[]']:checked"
+        );
+
+    if (checked.length === 0) {
+
+        alert(
+            "Select at least one memento"
+        );
+
+        return;
+    }
+
+    if (
+        !confirm(
+            "Delete selected mementos?"
+        )
+    ) {
+        return;
+    }
+
+    const form =
+        document.getElementById(
+            "mementoForm"
+        );
+
+    form.action =
+        "{{ url_for('admin.bulk_delete_mementos') }}";
+
+    form.submit();
+}
+
+
+// =========================
+// SEARCH
+// =========================
+document.getElementById(
+    "searchInput"
+).addEventListener(
+    "keyup",
+    function () {
+
+        const query =
+            this.value;
+
+        fetch(
+            `/admin/mementos/search?q=${query}`
+        )
+
+        .then(
+            response =>
+                response.json()
+        )
+
+        .then(data => {
+
+            const tableBody =
+                document.getElementById(
+                    "mementoTableBody"
+                );
+
+            tableBody.innerHTML = "";
+
+            if (
+                data.length === 0
+            ) {
+
+                tableBody.innerHTML = `
+
+                    <tr>
+
+                        <td
+                            colspan="7"
+                            style="text-align:center;">
+
+                            ❌ No mementos found
+
+                        </td>
+
+                    </tr>
+                `;
+
+                return;
+            }
+
+            data.forEach(
+                (m, index) => {
+
+                tableBody.innerHTML += `
+
+                    <tr>
+
+                        <td class="sr-no">
+                            ${index + 1}
+                        </td>
+
+                        <input
+                            type="hidden"
+                            name="id[]"
+                            value="${m.id}"
+                        >
+
+                        <td>
+                            <input
+                                name="code[]"
+                                value="${m.code}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="dimension[]"
+                                value="${m.dimension}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="price[]"
+                                value="${m.price}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+                            <input
+                                name="quantity[]"
+                                value="${m.quantity}"
+                                class="form-control"
+                            >
+                        </td>
+
+                        <td>
+
+                            <button
+                                type="button"
+                                class="btn btn-info btn-sm"
+                                onclick="openMaterialModal(${m.id})">
+
+                                Details
+
+                            </button>
+
+                        </td>
+
+                        <td>
+
+                            <input
+                                type="checkbox"
+                                name="selected_ids[]"
+                                value="${m.id}"
+                            >
+
+                        </td>
+
+                    </tr>
+                `;
+            });
+        });
+    }
+);
+
+</script>
+
+{% endblock %}

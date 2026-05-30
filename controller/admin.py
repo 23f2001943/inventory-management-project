@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from controller.decorators import login_required, role_required
-from controller.models import Foil, Board, Accessory, db, Order, OrderItem, Paint
+from controller.models import Foil, Board, Accessory, db, Order, OrderItem, Paint, Memento, MementoMaterial, Supplier, SupplierMaterial
 
 
 import pandas as pd
@@ -613,3 +613,485 @@ def search_accessories():
 
     return jsonify(result)
 
+# =========================
+# VIEW MEMENTOS
+# =========================
+@admin_bp.route("/mementos")
+@login_required
+@role_required("Admin")
+def view_mementos():
+
+    mementos = Memento.query.all()
+
+    foils = Foil.query.all()
+    paints = Paint.query.all()
+    accessories = Accessory.query.all()
+    boards = Board.query.all()
+
+    return render_template(
+        "admin/memento.html",
+        mementos=mementos,
+        foils=foils,
+        paints=paints,
+        accessories=accessories,
+        boards=boards
+    )
+
+# =========================
+# BULK UPDATE MEMENTOS
+# =========================
+@admin_bp.route("/mementos/bulk-update", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_update_mementos():
+
+    ids = request.form.getlist("id[]")
+    codes = request.form.getlist("code[]")
+    dimensions = request.form.getlist("dimension[]")
+    prices = request.form.getlist("price[]")
+    quantities = request.form.getlist("quantity[]")
+
+    total_rows = len(codes)
+
+    for i in range(total_rows):
+
+        code = codes[i].strip()
+        dimension = dimensions[i].strip()
+        price = prices[i]
+        quantity = quantities[i]
+
+        if code == "":
+            continue
+
+        # UPDATE EXISTING
+        if i < len(ids) and ids[i]:
+
+            memento = Memento.query.get(ids[i])
+
+            if memento:
+
+                existing = Memento.query.filter(
+                    Memento.code.ilike(code),
+                    Memento.id != memento.id
+                ).first()
+
+                if existing:
+
+                    flash(
+                        f"Memento code '{code}' already exists",
+                        "danger"
+                    )
+
+                    return redirect(
+                        url_for("admin.view_mementos")
+                    )
+
+                memento.code = code
+                memento.dimension = dimension
+                memento.price = float(price)
+                memento.quantity = int(quantity)
+
+        # CREATE NEW
+        else:
+
+            existing = Memento.query.filter(
+                Memento.code.ilike(code)
+            ).first()
+
+            if existing:
+
+                flash(
+                    f"Memento code '{code}' already exists",
+                    "danger"
+                )
+
+                return redirect(
+                    url_for("admin.view_mementos")
+                )
+
+            new_memento = Memento(
+                code=code,
+                dimension=dimension,
+                price=float(price),
+                quantity=int(quantity)
+            )
+
+            db.session.add(new_memento)
+
+    db.session.commit()
+
+    flash("Mementos updated successfully", "success")
+
+    return redirect(url_for("admin.view_mementos"))
+
+# =========================
+# BULK DELETE MEMENTOS
+# =========================
+@admin_bp.route("/mementos/bulk-delete", methods=["POST"])
+@login_required
+@role_required("Admin")
+def bulk_delete_mementos():
+
+    selected_ids = request.form.getlist("selected_ids[]")
+
+    for memento_id in selected_ids:
+
+        memento = Memento.query.get(memento_id)
+
+        if memento:
+            db.session.delete(memento)
+
+    db.session.commit()
+
+    flash("Selected mementos deleted", "danger")
+
+    return redirect(url_for("admin.view_mementos"))
+
+# =========================
+# SEARCH MEMENTOS
+# =========================
+@admin_bp.route("/mementos/search")
+@login_required
+@role_required("Admin")
+def search_mementos():
+
+    query = request.args.get("q", "")
+
+    if query.strip() == "":
+
+        mementos = Memento.query.all()
+
+    else:
+
+        mementos = Memento.query.filter(
+            Memento.code.ilike(f"%{query}%")
+        ).all()
+
+    result = []
+
+    for memento in mementos:
+
+        result.append({
+            "id": memento.id,
+            "code": memento.code,
+            "dimension": memento.dimension,
+            "price": memento.price,
+            "quantity": memento.quantity
+        })
+
+    return jsonify(result)
+
+
+# =========================
+# SAVE MEMENTO MATERIALS
+# =========================
+@admin_bp.route(
+    "/mementos/<int:memento_id>/save-materials",
+    methods=["POST"]
+)
+@login_required
+@role_required("Admin")
+def save_memento_materials(memento_id):
+
+    material_types = request.form.getlist("material_type[]")
+    material_ids = request.form.getlist("material_id[]")
+    quantities = request.form.getlist("quantity_used[]")
+
+    # DELETE OLD
+    MementoMaterial.query.filter_by(
+        memento_id=memento_id
+    ).delete()
+
+    # SAVE NEW
+    for i in range(len(material_types)):
+
+        if material_ids[i] == "":
+            continue
+
+        material = MementoMaterial(
+            memento_id=memento_id,
+            material_type=material_types[i],
+            material_id=int(material_ids[i]),
+            quantity_used=float(quantities[i])
+        )
+
+        db.session.add(material)
+
+    db.session.commit()
+
+    flash("Materials saved successfully", "success")
+
+    return redirect(url_for("admin.view_mementos"))
+
+# =========================
+# GET MEMENTO MATERIALS
+# =========================
+@admin_bp.route(
+    "/mementos/<int:memento_id>/materials"
+)
+@login_required
+@role_required("Admin")
+def get_memento_materials(memento_id):
+
+    materials = MementoMaterial.query.filter_by(
+        memento_id=memento_id
+    ).all()
+
+    result = []
+
+    for material in materials:
+
+        material_name = ""
+
+        if material.material_type == "Foil":
+
+            item = Foil.query.get(
+                material.material_id
+            )
+
+            if item:
+                material_name = item.foil_code
+
+        elif material.material_type == "Paint":
+
+            item = Paint.query.get(
+                material.material_id
+            )
+
+            if item:
+                material_name = item.name
+
+        elif material.material_type == "Accessory":
+
+            item = Accessory.query.get(
+                material.material_id
+            )
+
+            if item:
+                material_name = item.name
+
+        elif material.material_type == "Board":
+
+            item = Board.query.get(
+                material.material_id
+            )
+
+            if item:
+                material_name = item.name
+
+        result.append({
+            "id": material.id,
+            "material_type": material.material_type,
+            "material_id": material.material_id,
+            "material_name": material_name,
+            "quantity_used": material.quantity_used
+        })
+
+    return jsonify(result)
+
+
+# =========================
+# SAVE MATERIALS AJAX
+# =========================
+@admin_bp.route(
+    "/mementos/<int:memento_id>/materials/save",
+    methods=["POST"]
+)
+@login_required
+@role_required("Admin")
+def save_memento_materials_ajax(memento_id):
+
+    data = request.get_json()
+
+    MementoMaterial.query.filter_by(
+        memento_id=memento_id
+    ).delete()
+
+    for row in data:
+
+        material = MementoMaterial(
+            memento_id=memento_id,
+            material_type=row["material_type"],
+            material_id=int(row["material_id"]),
+            quantity_used=float(row["quantity_used"])
+        )
+
+        db.session.add(material)
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "Materials saved"
+    })
+
+# =========================
+# GET MATERIAL OPTIONS
+# =========================
+@admin_bp.route("/materials/options")
+@login_required
+@role_required("Admin")
+def material_options():
+
+    return jsonify({
+
+        "foils": [
+            {
+                "id": f.id,
+                "name": f.foil_code
+            }
+            for f in Foil.query.all()
+        ],
+
+        "paints": [
+            {
+                "id": p.id,
+                "name": p.name
+            }
+            for p in Paint.query.all()
+        ],
+
+        "accessories": [
+            {
+                "id": a.id,
+                "name": a.name
+            }
+            for a in Accessory.query.all()
+        ],
+
+        "boards": [
+            {
+                "id": b.id,
+                "name": b.name
+            }
+            for b in Board.query.all()
+        ]
+    })
+
+# =========================
+# VIEW SUPPLIERS
+# =========================
+@admin_bp.route("/suppliers")
+@login_required
+@role_required("Admin")
+def view_suppliers():
+
+    suppliers = Supplier.query.all()
+
+    foils = Foil.query.all()
+    paints = Paint.query.all()
+    accessories = Accessory.query.all()
+    boards = Board.query.all()
+
+    return render_template(
+        "admin/supplier.html",
+        suppliers=suppliers,
+        foils=foils,
+        paints=paints,
+        accessories=accessories,
+        boards=boards
+    )
+
+# =========================
+# ADD SUPPLIER
+# =========================
+@admin_bp.route(
+    "/suppliers/add",
+    methods=["POST"]
+)
+@login_required
+@role_required("Admin")
+def add_supplier():
+
+    supplier_name = request.form.get(
+        "supplier_name"
+    )
+
+    if supplier_name.strip() == "":
+        return redirect(
+            url_for("admin.view_suppliers")
+        )
+
+    existing = Supplier.query.filter_by(
+        supplier_name=supplier_name
+    ).first()
+
+    if existing:
+        flash(
+            "Supplier already exists",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.view_suppliers")
+        )
+
+    supplier = Supplier(
+        supplier_name=supplier_name
+    )
+
+    db.session.add(supplier)
+    db.session.commit()
+
+    return redirect(
+        url_for("admin.view_suppliers")
+    )
+
+# =========================
+# SAVE SUPPLIER MATERIALS
+# =========================
+# =========================
+# SAVE SUPPLIER MATERIALS
+# =========================
+@admin_bp.route(
+    "/suppliers/<int:supplier_id>/save",
+    methods=["POST"]
+)
+@login_required
+@role_required("Admin")
+def save_supplier_materials(supplier_id):
+
+    item_types = request.form.getlist(
+        "item_type[]"
+    )
+
+    item_names = request.form.getlist(
+        "item_name[]"
+    )
+
+    lead_times = request.form.getlist(
+        "lead_time[]"
+    )
+    safety_stocks = request.form.getlist(
+    "safety_stock[]"
+)
+
+    SupplierMaterial.query.filter_by(
+        supplier_id=supplier_id
+    ).delete()
+
+    for i in range(len(item_types)):
+
+        if item_names[i].strip() == "":
+            continue
+
+        material = SupplierMaterial(
+            supplier_id=supplier_id,
+            item_type=item_types[i],
+            item_name=item_names[i],
+            lead_time=int(lead_times[i] or 0),
+            safety_stock=int(safety_stocks[i] or 0)
+        )
+
+        db.session.add(material)
+
+    db.session.commit()
+
+    flash(
+        "Supplier materials updated successfully",
+        "success"
+    )
+
+    return redirect(
+        url_for("admin.view_suppliers")
+    )

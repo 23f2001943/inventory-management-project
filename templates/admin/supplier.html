@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <!-- TOP BAR -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="btn btn-dark">
+
+            ← Back
+
+        </a>
+
+        <form method="POST"
+              action="{{ url_for('admin.add_supplier') }}"
+              class="d-flex">
+
+            <input
+                type="text"
+                name="supplier_name"
+                class="form-control me-2"
+                placeholder="Supplier Name"
+                required
+            >
+
+            <button
+                type="submit"
+                class="btn btn-success">
+
+                + Add Supplier
+
+            </button>
+
+        </form>
+
+    </div>
+
+    <div class="page-title">
+        Supplier Management
+    </div>
+
+    {% if suppliers|length == 0 %}
+
+    <div class="glass-table p-4">
+
+        <h4>No Suppliers Added Yet</h4>
+
+    </div>
+
+    {% endif %}
+
+    {% for supplier in suppliers %}
+
+    <div class="glass-table mb-5 p-4">
+
+        <h3 class="mb-4">
+
+            {{ supplier.supplier_name }}
+
+        </h3>
+
+        <form
+            method="POST"
+            action="{{ url_for('admin.save_supplier_materials',
+                                supplier_id=supplier.id) }}"
+        >
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Sr. No</th>
+
+                        <th>Item Type</th>
+
+                        <th>Item Name</th>
+
+                        <th>Lead Time (Weeks)</th>
+
+                        <th>Safety Stock</th>
+
+                        <th>Delete</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody
+                    id="supplier-body-{{ supplier.id }}"
+                >
+
+                    {% for material in supplier.materials %}
+
+                    <tr>
+
+                        <td class="sr-no">
+
+                            {{ loop.index }}
+
+                        </td>
+
+                        <td>
+
+                            <select
+                                name="item_type[]"
+                                class="form-control">
+
+                                <option value="Foil"
+                                    {% if material.item_type == "Foil" %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    Foil
+                                </option>
+
+                                <option value="Paint"
+                                    {% if material.item_type == "Paint" %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    Paint
+                                </option>
+
+                                <option value="Accessory"
+                                    {% if material.item_type == "Accessory" %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    Accessory
+                                </option>
+
+                                <option value="Board"
+                                    {% if material.item_type == "Board" %}
+                                    selected
+                                    {% endif %}
+                                >
+                                    Board
+                                </option>
+
+                            </select>
+
+                        </td>
+
+                        <td>
+
+                            <input
+                                type="text"
+                                name="item_name[]"
+                                value="{{ material.item_name }}"
+                                class="form-control"
+                            >
+
+                        </td>
+
+                        <td>
+
+                            <input
+                                type="number"
+                                name="lead_time[]"
+                                value="{{ material.lead_time }}"
+                                class="form-control"
+                            >
+
+                        </td>
+
+                        <td>
+
+    <input
+        type="number"
+        name="safety_stock[]"
+        value="{{ material.safety_stock }}"
+        class="form-control"
+    >
+
+</td>
+
+                        <td>
+
+                            <input
+                                type="checkbox"
+                                onclick="this.closest('tr').remove()">
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+            <div class="mt-3">
+
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    onclick="addMaterialRow('{{ supplier.id }}')">
+
+                    + Add Material
+
+                </button>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary">
+
+                    💾 Save
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+<script>
+
+function addMaterialRow(supplierId) {
+
+    const tbody =
+        document.getElementById(
+            "supplier-body-" + supplierId
+        );
+
+    const rowCount =
+        tbody.querySelectorAll("tr").length + 1;
+
+    const row =
+        document.createElement("tr");
+
+    row.innerHTML = `
+
+        <td class="sr-no">
+
+            ${rowCount}
+
+        </td>
+
+        <td>
+
+            <select
+                name="item_type[]"
+                class="form-control">
+
+                <option value="Foil">
+                    Foil
+                </option>
+
+                <option value="Paint">
+                    Paint
+                </option>
+
+                <option value="Accessory">
+                    Accessory
+                </option>
+
+                <option value="Board">
+                    Board
+                </option>
+
+            </select>
+
+        </td>
+
+        <td>
+
+            <input
+                type="text"
+                name="item_name[]"
+                class="form-control"
+                placeholder="RJ-2 / NC Black / Hook"
+            >
+
+        </td>
+
+        <td>
+
+            <input
+                type="number"
+                name="lead_time[]"
+                class="form-control"
+                value="1"
+            >
+
+        </td>
+
+        <td>
+
+    <input
+        type="number"
+        name="safety_stock[]"
+        class="form-control"
+        value="0"
+    >
+
+</td>
+
+        <td>
+
+            <input
+                type="checkbox"
+                onclick="this.closest('tr').remove()">
+
+        </td>
+
+    `;
+
+    tbody.appendChild(row);
+}
+
+</script>
+
+{% endblock %}
