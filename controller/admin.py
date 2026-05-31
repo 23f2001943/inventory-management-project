@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from controller.decorators import login_required, role_required
 from controller.models import Foil, Board, Accessory, db, Order, OrderItem, Paint, Memento, MementoMaterial, Supplier, SupplierMaterial, MRPOrder
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, date
+from math import sqrt
 import pandas as pd
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -1356,6 +1356,14 @@ def save_supplier_materials(supplier_id):
     safety_stocks = request.form.getlist(
     "safety_stock[]"
 )
+    
+    ordering_costs = request.form.getlist(
+        "ordering_cost[]"
+    )
+
+    holding_costs = request.form.getlist(
+        "holding_cost[]"
+    )
 
     SupplierMaterial.query.filter_by(
         supplier_id=supplier_id
@@ -1367,11 +1375,29 @@ def save_supplier_materials(supplier_id):
             continue
 
         material = SupplierMaterial(
+
             supplier_id=supplier_id,
+
             item_type=item_types[i],
+
             item_name=item_names[i],
-            lead_time=int(lead_times[i] or 0),
-            safety_stock=int(safety_stocks[i] or 0)
+
+            lead_time=int(
+                lead_times[i] or 0
+            ),
+
+            safety_stock=int(
+                safety_stocks[i] or 0
+            ),
+
+            ordering_cost=float(
+                ordering_costs[i] or 0
+            ),
+
+            holding_cost=float(
+                holding_costs[i] or 0
+            )
+
         )
 
         db.session.add(material)
@@ -1844,5 +1870,155 @@ def abc_analysis_data():
         else:
 
             row["abc_class"] = "C"
+
+    return jsonify(rows)
+
+@admin_bp.route("/eoq")
+@login_required
+@role_required("Admin")
+def view_eoq():
+
+    return render_template(
+        "admin/eoq.html"
+    )
+
+@admin_bp.route("/eoq/data")
+@login_required
+@role_required("Admin")
+def eoq_data():
+
+    analysis_type = request.args.get(
+        "type",
+        "all"
+    )
+
+    today = date.today()
+
+    # Previous completed FY
+
+    if today.month >= 4:
+
+        fy_start = date(
+            today.year - 1,
+            4,
+            1
+        )
+
+        fy_end = date(
+            today.year,
+            3,
+            31
+        )
+
+    else:
+
+        fy_start = date(
+            today.year - 2,
+            4,
+            1
+        )
+
+        fy_end = date(
+            today.year - 1,
+            3,
+            31
+        )
+
+    rows = []
+
+    materials = SupplierMaterial.query.all()
+
+    sr_no = 1
+
+    for material in materials:
+
+        if (
+            analysis_type != "all"
+            and
+            material.item_type.lower()
+            != analysis_type.lower()
+        ):
+            continue
+
+        demand = 0
+
+        orders = OrderItem.query.filter_by(
+            item_type=material.item_type,
+            code=material.item_name,
+            status="Received"
+        ).all()
+
+        for order in orders:
+
+            if (
+                order.received_date
+                and
+                fy_start
+                <= order.received_date
+                <= fy_end
+            ):
+
+                demand += order.quantity
+
+        S = material.ordering_cost or 0
+
+        H = material.holding_cost or 0
+
+        lead_time_weeks = material.lead_time or 0
+
+        safety_stock = material.safety_stock or 0
+
+        eoq = 0
+
+        reorder_point = 0
+
+        if demand > 0:
+
+            daily_demand = demand / 365
+
+            lead_time_days = (
+                lead_time_weeks * 7
+            )
+
+            reorder_point = round(
+                (
+                    daily_demand
+                    *
+                    lead_time_days
+                )
+                +
+                safety_stock
+            )
+
+        if demand > 0 and S > 0 and H > 0:
+
+            eoq = round(
+                sqrt(
+                    (2 * demand * S)
+                    / H
+                )
+            )
+
+        rows.append({
+
+            "sr_no": sr_no,
+
+            "type": material.item_type,
+
+            "item": material.item_name,
+
+            "demand": demand,
+
+            "ordering_cost": S,
+
+            "holding_cost": H,
+
+            "eoq": eoq,
+
+            "reorder_point": reorder_point
+
+        })
+
+        sr_no += 1
 
     return jsonify(rows)

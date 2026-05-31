@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <a
+            href="{{ url_for('admin.dashboard') }}"
+            class="btn btn-dark">
+
+            ← Back
+
+        </a>
+
+    </div>
+
+    <div class="page-title">
+        EOQ Analysis
+    </div>
+
+    <div class="glass-table p-3 mb-4">
+
+        <select
+            id="eoqType"
+            class="form-control"
+            style="max-width:300px;">
+
+            <option value="all">
+                All Items
+            </option>
+
+            <option value="Foil">
+                Foils
+            </option>
+
+            <option value="Paint">
+                Paints
+            </option>
+
+            <option value="Board">
+                Boards
+            </option>
+
+            <option value="Accessory">
+                Accessories
+            </option>
+
+        </select>
+
+    </div>
+
+    <div class="glass-table">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Sr No</th>
+
+                    <th>Type</th>
+
+                    <th>Item</th>
+
+                    <th>Demand</th>
+
+                    <th>Ordering Cost</th>
+
+                    <th>Holding Cost</th>
+
+                    <th>EOQ</th>
+
+                    <th>Reorder Point</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="eoqTableBody">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script>
+
+function loadEOQ() {
+
+    const type =
+        document.getElementById(
+            "eoqType"
+        ).value;
+
+    fetch(
+        `/admin/eoq/data?type=${type}`
+    )
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        const tbody =
+            document.getElementById(
+                "eoqTableBody"
+            );
+
+        tbody.innerHTML = "";
+
+        if (data.length === 0) {
+
+            tbody.innerHTML = `
+
+                <tr>
+
+                    <td colspan="8"
+                        style="text-align:center;">
+
+                        No EOQ data available
+
+                    </td>
+
+                </tr>
+
+            `;
+
+            return;
+        }
+
+        data.forEach(row => {
+
+            tbody.innerHTML += `
+
+                <tr>
+
+                    <td>${row.sr_no}</td>
+
+                    <td>${row.type}</td>
+
+                    <td>${row.item}</td>
+
+                    <td>${row.demand}</td>
+
+                    <td>${row.ordering_cost}</td>
+
+                    <td>${row.holding_cost}</td>
+
+                    <td>${row.eoq}</td>
+
+                    <td>${row.reorder_point}</td>
+
+                </tr>
+
+            `;
+
+        });
+
+    });
+
+}
+
+document
+.getElementById("eoqType")
+.addEventListener(
+    "change",
+    loadEOQ
+);
+
+loadEOQ();
+
+</script>
+
+{% endblock %}
