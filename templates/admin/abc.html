@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block page_class %}company-dashboard-bg{% endblock %}
+
+{% block boxed_content %}{% endblock %}
+{% block free_content %}
+
+{% include "partials/navbar.html" %}
+
+<div class="dashboard-container">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="btn btn-dark">
+
+            ← Back
+
+        </a>
+
+    </div>
+
+    <div class="page-title">
+        ABC Analysis
+    </div>
+
+    <div class="glass-table p-3 mb-4">
+
+        <select
+            id="abcType"
+            class="form-control"
+            style="max-width:300px;">
+
+            <option value="all">
+                All Items
+            </option>
+
+            <option value="Foil">
+                Foils
+            </option>
+
+            <option value="Paint">
+                Paints
+            </option>
+
+            <option value="Board">
+                Boards
+            </option>
+
+            <option value="Accessory">
+                Accessories
+            </option>
+
+        </select>
+
+    </div>
+
+    <div class="glass-table">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Type</th>
+
+                    <th>Item</th>
+
+                    <th>Total Ordered Qty</th>
+
+                    <th>Average Price</th>
+
+                    <th>Demand Value</th>
+
+                    <th>Cumulative %</th>
+
+                    <th>ABC Class</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="abcTableBody">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script>
+
+function loadABCAnalysis() {
+
+    const type =
+        document.getElementById(
+            "abcType"
+        ).value;
+
+    fetch(
+        `/admin/abc-analysis/data?type=${type}`
+    )
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        const tbody =
+            document.getElementById(
+                "abcTableBody"
+            );
+
+        tbody.innerHTML = "";
+
+        if (data.length === 0) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7"
+                        style="text-align:center;">
+                        No ABC data available
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        data.forEach(row => {
+
+            tbody.innerHTML += `
+
+                <tr>
+
+                    <td>${row.type}</td>
+
+                    <td>${row.item}</td>
+
+                    <td>${row.qty}</td>
+
+                    <td>${row.avg_price}</td>
+
+                    <td>${row.value.toFixed(2)}</td>
+
+                    <td>${row.cum_percent}%</td>
+
+                    <td>${row.abc_class}</td>
+
+                </tr>
+
+            `;
+        });
+
+    });
+
+}
+
+document
+.getElementById("abcType")
+.addEventListener(
+    "change",
+    loadABCAnalysis
+);
+
+loadABCAnalysis();
+
+</script>
+
+{% endblock %}

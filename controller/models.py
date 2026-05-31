@@ -237,6 +237,16 @@ class SupplierMaterial(db.Model):
     default=0
     )
 
+    ordering_cost = db.Column(
+        db.Float,
+        default=0
+    )
+
+    holding_cost = db.Column(
+        db.Float,
+        default=0
+    )
+
 # =========================
 # MRP ORDERS
 # =========================

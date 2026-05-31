@@ -242,7 +242,7 @@ def create_order():
     for item in data:
         order_item = OrderItem(
             order_id=order.id,
-            item_type="foil",  # TEMP (we'll improve later)
+            item_type="Foil",  # TEMP (we'll improve later)
             item_id=item.get("item_id"),         # TEMP (will replace with autocomplete)
             code=item.get("code"),
             quantity=int(item.get("quantity", 0)),
@@ -1742,3 +1742,107 @@ def material_mrp_details(
 
         schedule=schedule
     )
+
+@admin_bp.route("/abc-analysis")
+@login_required
+@role_required("Admin")
+def view_abc_analysis():
+
+    return render_template(
+        "admin/abc.html"
+    )
+
+from collections import defaultdict
+
+@admin_bp.route("/abc-analysis/data")
+@login_required
+@role_required("Admin")
+def abc_analysis_data():
+
+    analysis_type = request.args.get(
+        "type",
+        "all"
+    )
+
+    order_items = OrderItem.query.filter_by(
+        status="Received"
+    ).all()
+
+    summary = defaultdict(lambda: {
+        "type": "",
+        "item": "",
+        "qty": 0,
+        "value": 0
+    })
+
+    for item in order_items:
+
+        item_type = item.item_type.strip()
+
+        if (
+            analysis_type != "all"
+            and
+            item_type.lower() != analysis_type.lower()
+        ):
+            continue
+
+        key = (
+            item_type,
+            item.code
+        )
+
+        summary[key]["type"] = item_type
+        summary[key]["item"] = item.code
+
+        summary[key]["qty"] += item.quantity
+
+        summary[key]["value"] += (
+            item.quantity * item.price
+        )
+
+    rows = list(summary.values())
+
+    rows.sort(
+        key=lambda x: x["value"],
+        reverse=True
+    )
+
+    total_value = sum(
+        row["value"]
+        for row in rows
+    )
+
+    cumulative = 0
+
+    for row in rows:
+
+        row["avg_price"] = round(
+            row["value"] / row["qty"],
+            2
+        ) if row["qty"] else 0
+
+        if total_value > 0:
+
+            cumulative += (
+                row["value"] /
+                total_value
+            ) * 100
+
+        row["cum_percent"] = round(
+            cumulative,
+            2
+        )
+
+        if cumulative <= 70:
+
+            row["abc_class"] = "A"
+
+        elif cumulative <= 90:
+
+            row["abc_class"] = "B"
+
+        else:
+
+            row["abc_class"] = "C"
+
+    return jsonify(rows)
