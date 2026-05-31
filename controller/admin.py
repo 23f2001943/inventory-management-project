@@ -546,6 +546,7 @@ def bulk_update_boards():
     names = request.form.getlist("name[]")
     dimensions = request.form.getlist("dimension[]")
     prices = request.form.getlist("price[]")
+    quantities = request.form.getlist("quantity[]")
 
     for i in range(len(names)):
 
@@ -568,12 +569,14 @@ def bulk_update_boards():
             board = Board.query.get(ids[i])
             if board:
                 board.name = names[i]
+                board.quantity = quantities[i]
                 board.length = length
                 board.breadth = breadth
                 board.price = prices[i]
         else:
             new_board = Board(
                 name=names[i],
+                quantity=quantities[i],
                 length=length,
                 breadth=breadth,
                 price=prices[i]
@@ -601,6 +604,76 @@ def bulk_delete_boards():
 
     flash(f"{len(ids)} boards deleted", "success")
     return redirect(url_for("admin.view_boards"))
+
+@admin_bp.route("/board/order/<int:board_id>", methods=["POST"])
+@login_required
+@role_required("Admin")
+def order_board(board_id):
+
+    board = Board.query.get_or_404(board_id)
+
+    data = request.get_json()
+
+    qty = int(data.get("quantity", 0))
+
+    if qty <= 0:
+        return jsonify({
+            "message": "Invalid quantity"
+        }), 400
+
+    supplier_material = SupplierMaterial.query.filter_by(
+        item_type="Board",
+        item_name=board.name
+    ).first()
+
+    if not supplier_material:
+
+        return jsonify({
+            "message":
+            f"No supplier configured for {board.name}"
+        }), 400
+
+    arrival_date = (
+        datetime.utcnow().date() +
+        timedelta(
+            weeks=supplier_material.lead_time
+        )
+    )
+
+    order = Order()
+
+    db.session.add(order)
+    db.session.flush()
+
+    order_item = OrderItem(
+
+        order_id=order.id,
+
+        item_type="Board",
+
+        item_id=board.id,
+
+        code=board.name,
+
+        quantity=qty,
+
+        price=board.price,
+
+        status="Placed",
+
+        arrival_date=arrival_date
+    )
+
+    db.session.add(order_item)
+
+    db.session.commit()
+
+    return jsonify({
+
+        "message":
+        f"Board order placed. Arrival: {arrival_date}"
+
+    })
 
 # =========================
 # VIEW ACCESSORIES
@@ -755,6 +828,81 @@ def search_accessories():
         })
 
     return jsonify(result)
+
+@admin_bp.route("/accessory/order/<int:accessory_id>", methods=["POST"])
+@login_required
+@role_required("Admin")
+def order_accessory(accessory_id):
+
+    accessory = Accessory.query.get_or_404(
+        accessory_id
+    )
+
+    data = request.get_json()
+
+    qty = int(data.get("quantity", 0))
+
+    if qty <= 0:
+
+        return jsonify({
+            "message": "Invalid quantity"
+        }), 400
+
+    supplier_material = SupplierMaterial.query.filter_by(
+        item_type="Accessory",
+        item_name=accessory.name
+    ).first()
+
+    if not supplier_material:
+
+        return jsonify({
+            "message":
+            f"No supplier configured for {accessory.name}"
+        }), 400
+
+    arrival_date = (
+        datetime.utcnow().date()
+        +
+        timedelta(
+            weeks=supplier_material.lead_time
+        )
+    )
+
+    order = Order()
+
+    db.session.add(order)
+
+    db.session.flush()
+
+    order_item = OrderItem(
+
+        order_id=order.id,
+
+        item_type="Accessory",
+
+        item_id=accessory.id,
+
+        code=accessory.name,
+
+        quantity=qty,
+
+        price=accessory.price,
+
+        status="Placed",
+
+        arrival_date=arrival_date
+    )
+
+    db.session.add(order_item)
+
+    db.session.commit()
+
+    return jsonify({
+
+        "message":
+        f"Accessory order placed. Arrival: {arrival_date}"
+
+    })
 
 # =========================
 # VIEW MEMENTOS

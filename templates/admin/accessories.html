@@ -61,6 +61,7 @@
                         <th>Name</th>
                         <th>Price</th>
                         <th>Quantity</th>
+                        <th>Order</th>
                         <th>Delete</th>
 
                     </tr>
@@ -104,6 +105,19 @@
                                 value="{{ accessory.quantity }}"
                                 class="form-control"
                             >
+                        </td>
+
+                        <td>
+
+                            <button
+                                type="button"
+                                class="btn btn-warning btn-sm"
+                                onclick="orderAccessory('{{ accessory.id }}', '{{ accessory.name }}', '{{ accessory.price }}')">
+
+                                Order
+
+                            </button>
+
                         </td>
 
                         <td>
@@ -165,6 +179,8 @@ function addAccessoryRow() {
                 class="form-control"
             >
         </td>
+
+        <td></td>
 
         <td></td>
     `;
@@ -279,6 +295,19 @@ document.getElementById("searchInput")
                         </td>
 
                         <td>
+
+                            <button
+                                type="button"
+                                class="btn btn-warning btn-sm"
+                                onclick="orderAccessory('${a.id}', '${a.name}', '${a.price}')">
+
+                                Order
+
+                            </button>
+
+                        </td>
+
+                        <td>
                             <input
                                 type="checkbox"
                                 name="selected_ids[]"
@@ -294,6 +323,42 @@ document.getElementById("searchInput")
         });
 });
 
+
+function orderAccessory(accessoryId, accessoryName, price) {
+
+    const qty = prompt(
+        `Enter order quantity for ${accessoryName}`
+    );
+
+    if (!qty || qty <= 0) {
+        return;
+    }
+
+    fetch(`/admin/accessory/order/${accessoryId}`, {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            quantity: qty
+        })
+
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        alert(data.message);
+
+        location.reload();
+
+    });
+
+}
 </script>
 
 {% endblock %}

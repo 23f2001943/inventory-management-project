@@ -39,9 +39,11 @@
 
                         <th>Sr. No</th>
                         <th>Name</th>
+                        <th>Quantity</th>
                         <th>Dimension (A × B)</th>
                         <th>Price (per sq.in)</th>
                         <th>Amount</th>
+                        <th>Order</th>
                         <th>Delete</th>
                     </tr>
                 </thead>
@@ -61,10 +63,16 @@
                         </td>
 
                         <td>
-                            <input 
-                                name="dimension[]" 
-                                value="{{ b.length }}*{{ b.breadth }}" 
-                                placeholder="e.g. 8*8" 
+                            <input
+                                name="quantity[]"
+                                value="{{ b.quantity }}"
+                                class="form-control">
+                        </td>
+
+                        <td>
+                            <input
+                                name="dimension[]"
+                                value="{{ b.length }}*{{ b.breadth }}"
                                 class="form-control dimension">
                         </td>
 
@@ -74,6 +82,19 @@
 
                         <td class="amount">
                             {{ b.length * b.breadth * b.price }}
+                        </td>
+
+                        <td>
+
+                            <button
+                                type="button"
+                                class="btn btn-warning btn-sm"
+                                onclick="orderBoard('{{ b.id }}', '{{ b.name }}', '{{ b.price }}')">
+
+                                Order
+
+                            </button>
+
                         </td>
 
                         <td>
@@ -104,12 +125,20 @@ function addBoardRow() {
         <td><input name="name[]" class="form-control"></td>
 
         <td>
+            <input
+                name="quantity[]"
+                value="0"
+                class="form-control">
+        </td>
+
+        <td>
             <input name="dimension[]" placeholder="e.g. 8*8" class="form-control dimension">
         </td>
 
         <td><input name="price[]" class="form-control price"></td>
 
         <td class="amount">0</td>
+        <td></td>
 
         <td></td>
     `;
@@ -144,6 +173,41 @@ document.addEventListener("input", function(e) {
     }
 });
 
+function orderBoard(boardId, boardName, price) {
+
+    const qty = prompt(
+        `Enter order quantity for ${boardName}`
+    );
+
+    if (!qty || qty <= 0) {
+        return;
+    }
+
+    fetch(`/admin/board/order/${boardId}`, {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            quantity: qty
+        })
+
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        alert(data.message);
+
+        location.reload();
+
+    });
+
+}
 
 // 🔢 SERIAL UPDATE
 function updateBoardSerials() {
