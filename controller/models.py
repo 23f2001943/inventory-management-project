@@ -68,6 +68,7 @@ class Board(db.Model):
     length = db.Column(db.Float)
     breadth = db.Column(db.Float)
     price = db.Column(db.Float)
+    quantity = db.Column(db.Integer, default=0)
 
 class Accessory(db.Model):
     __tablename__ = "accessories"
@@ -160,6 +161,19 @@ class OrderItem(db.Model):
     
     quantity = db.Column(db.Integer)
     price = db.Column(db.Float)
+
+    status = db.Column(
+        db.String(20),
+        default="Placed"
+    )
+
+    arrival_date = db.Column(
+        db.Date
+    )
+
+    received_date = db.Column(
+        db.Date
+    )
 
 class Paint(db.Model):
     id = db.Column(db.Integer, primary_key=True)

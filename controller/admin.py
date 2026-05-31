@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from controller.decorators import login_required, role_required
 from controller.models import Foil, Board, Accessory, db, Order, OrderItem, Paint, Memento, MementoMaterial, Supplier, SupplierMaterial, MRPOrder
-
+from datetime import datetime, timedelta
 
 import pandas as pd
 
@@ -312,6 +312,149 @@ def order_history():
 def view_paints():
     paints = Paint.query.all()   # if model exists
     return render_template("admin/paint.html", paints=paints)
+
+
+@admin_bp.route("/paint/order/<int:paint_id>", methods=["POST"])
+@login_required
+@role_required("Admin")
+def order_paint(paint_id):
+
+    paint = Paint.query.get_or_404(paint_id)
+
+    data = request.get_json()
+
+    qty = int(data.get("quantity", 0))
+
+    if qty <= 0:
+        return jsonify({
+            "message": "Invalid quantity"
+        }), 400
+
+    supplier_material = SupplierMaterial.query.filter_by(
+        item_type="Paint",
+        item_name=paint.name
+    ).first()
+
+    if not supplier_material:
+        return jsonify({
+            "message": f"No supplier configured for {paint.name}"
+        }), 400
+
+    arrival_date = (
+        datetime.utcnow().date() +
+        timedelta(weeks=supplier_material.lead_time)
+    )
+
+    order = Order()
+
+    db.session.add(order)
+    db.session.flush()
+
+    order_item = OrderItem(
+
+        order_id=order.id,
+
+        item_type="Paint",
+
+        item_id=paint.id,
+
+        code=paint.name,
+
+        quantity=qty,
+
+        price=paint.price,
+
+        status="Placed",
+
+        arrival_date=arrival_date
+    )
+
+    db.session.add(order_item)
+
+    db.session.commit()
+
+    return jsonify({
+        "message":
+        f"Order placed successfully. Expected arrival: {arrival_date}"
+    })
+
+@admin_bp.route("/orders/receive/<int:item_id>")
+@login_required
+@role_required("Admin")
+def receive_order(item_id):
+
+    item = OrderItem.query.get_or_404(item_id)
+
+    if item.status == "Received":
+
+        flash("Order already received", "warning")
+
+        return redirect(
+            url_for("admin.order_history")
+        )
+
+    # ======================
+    # PAINT
+    # ======================
+
+    if item.item_type.lower() == "paint":
+
+        paint = Paint.query.get(item.item_id)
+
+        if paint:
+            paint.quantity += item.quantity
+
+    # ======================
+    # ACCESSORY
+    # ======================
+
+    elif item.item_type.lower() == "accessory":
+
+        accessory = Accessory.query.get(item.item_id)
+
+        if accessory:
+            accessory.quantity += item.quantity
+
+    # ======================
+    # BOARD
+    # ======================
+
+    elif item.item_type.lower() == "board":
+
+        board = Board.query.get(item.item_id)
+
+        if board:
+            board.quantity += item.quantity
+
+    # ======================
+    # FOIL
+    # ======================
+
+    elif item.item_type.lower() == "foil":
+
+        foil = Foil.query.get(item.item_id)
+
+        if foil:
+            foil.quantity += item.quantity
+
+    # ======================
+    # UPDATE ORDER STATUS
+    # ======================
+
+    item.status = "Received"
+
+    item.received_date = datetime.utcnow().date()
+
+    db.session.commit()
+
+    flash(
+        "Order received and inventory updated",
+        "success"
+    )
+
+    return redirect(
+        url_for("admin.order_history")
+    )
 
 @admin_bp.route("/paints/bulk-update", methods=["POST"])
 @login_required

@@ -30,6 +30,11 @@
                     <th>Quantity</th>
                     <th>Price</th>
                     <th>Total</th>
+
+                    <th>Status</th>
+                    <th>Arrival Date</th>
+                    <th>Received Date</th>
+                    <th>Action</th>
                 </tr>
             </thead>
 
@@ -37,13 +42,83 @@
                 {% for order in orders %}
                     {% for item in order.items %}
                     <tr>
+
                         <td>{{ order.id }}</td>
-                        <td>{{ order.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
+
+                        <td>
+                            {{ order.created_at.strftime("%d-%m-%Y %H:%M") }}
+                        </td>
+
                         <td>{{ item.code }}</td>
+
                         <td>{{ item.item_type }}</td>
+
                         <td>{{ item.quantity }}</td>
+
                         <td>{{ item.price }}</td>
-                        <td>{{ item.quantity * item.price }}</td>
+
+                        <td>
+                            {{ item.quantity * item.price }}
+                        </td>
+
+                        <td>
+
+                            {% if item.status == "Received" %}
+
+                                <span class="badge bg-success">
+                                    Received
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-warning text-dark">
+                                    Placed
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {% if item.arrival_date %}
+                                {{ item.arrival_date.strftime("%d-%m-%Y") }}
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {% if item.received_date %}
+                                {{ item.received_date.strftime("%d-%m-%Y") }}
+                            {% else %}
+                                -
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {% if item.status != "Received" %}
+
+                                                    <a
+                        href="{{ url_for('admin.receive_order', item_id=item.id) }}"
+                        class="btn btn-success btn-sm">
+
+                        Receive
+
+                    </a>
+
+                            {% else %}
+
+                                <span class="text-success">
+                                    ✓
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
                     </tr>
                     {% endfor %}
                 {% endfor %}

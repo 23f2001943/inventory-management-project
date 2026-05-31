@@ -54,6 +54,7 @@
                         <th>Quantity</th>
                         <th>Price</th>
                         <th>Amount</th>
+                        <th>Order</th>
                         <th>Delete</th>
                     </tr>
                 </thead>
@@ -85,7 +86,16 @@
                         </td>
 
                         <td>
-                            <input type="checkbox" name="selected_ids[]" value="{{ paint.id }}">
+                            <button
+                                type="button"
+                                class="btn btn-warning btn-sm"
+                                onclick="orderPaint('{{ paint.id }}', '{{ paint.name }}', '{{ paint.price }}')">
+                                Order
+                            </button>
+                        </td>
+
+                        <td>
+                            <input type="checkbox" name="selected_ids[]" value="${paint.id}">
                         </td>
                     </tr>
                     {% endfor %}
@@ -122,6 +132,8 @@ function addPaintRow() {
         </td>
 
         <td class="amount">0</td>
+        <td></td>
+
 
         <td></td>
     `;
@@ -223,6 +235,41 @@ document.getElementById("searchInput").addEventListener("keyup", function () {
         });
 });
 
+function orderPaint(paintId, paintName, price) {
+
+    const qty = prompt(
+        `Enter order quantity for ${paintName}`
+    );
+
+    if (!qty || qty <= 0) {
+        return;
+    }
+
+    fetch(`/admin/paint/order/${paintId}`, {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            quantity: qty
+        })
+
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        alert(data.message);
+
+        location.reload();
+
+    });
+
+}
 </script>
 
 {% endblock %}
