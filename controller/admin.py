@@ -1567,7 +1567,7 @@ def view_single_mrp(order_id):
 
                 material_name = item.name
 
-                available = 999999
+                available = item.quantity
 
         supplier = SupplierMaterial.query.filter_by(
             item_type=material.material_type,
@@ -1661,13 +1661,12 @@ def material_mrp_details(
 
     due_week = order.due_week
 
-    gross_requirement = (
-        material.quantity_used
-        * order.order_quantity
-    )
-
     available = 0
     material_name = ""
+
+    # =========================
+    # GET MATERIAL
+    # =========================
 
     if material.material_type == "Foil":
 
@@ -1676,7 +1675,9 @@ def material_mrp_details(
         )
 
         if item:
+
             available = item.quantity
+
             material_name = item.foil_code
 
     elif material.material_type == "Paint":
@@ -1686,7 +1687,9 @@ def material_mrp_details(
         )
 
         if item:
+
             available = item.quantity
+
             material_name = item.name
 
     elif material.material_type == "Accessory":
@@ -1696,7 +1699,9 @@ def material_mrp_details(
         )
 
         if item:
+
             available = item.quantity
+
             material_name = item.name
 
     elif material.material_type == "Board":
@@ -1706,8 +1711,14 @@ def material_mrp_details(
         )
 
         if item:
+
             material_name = item.name
-            available = 999999
+
+            available = item.quantity
+
+    # =========================
+    # SUPPLIER INFO
+    # =========================
 
     supplier = SupplierMaterial.query.filter_by(
         item_type=material.material_type,
@@ -1720,44 +1731,170 @@ def material_mrp_details(
     if supplier:
 
         lead_time = supplier.lead_time
+
         safety_stock = supplier.safety_stock
 
-    shortage = max(
-        0,
-        gross_requirement
-        + safety_stock
-        - available
-    )
-
-    release_week = max(
-        1,
-        due_week - lead_time
-    )
+    # =========================
+    # SCHEDULE STRUCTURE
+    # =========================
 
     schedule = {
 
         "gross": {},
+
+        "scheduled_receipt": {},
+
+        "projected": {},
+
         "net": {},
+
         "receipt": {},
+
         "release": {}
     }
 
     for week in range(1, due_week + 1):
 
         schedule["gross"][week] = 0
+
+        schedule["scheduled_receipt"][week] = 0
+
+        schedule["projected"][week] = 0
+
         schedule["net"][week] = 0
+
         schedule["receipt"][week] = 0
+
         schedule["release"][week] = 0
 
-    schedule["gross"][due_week] = gross_requirement
+    # =========================
+    # GROSS REQUIREMENTS
+    # ALL CUSTOMER ORDERS
+    # =========================
 
-    schedule["net"][due_week] = shortage
+    all_orders = MRPOrder.query.filter(
+        MRPOrder.due_week <= due_week
+    ).all()
 
-    schedule["receipt"][due_week] = shortage
+    for customer_order in all_orders:
 
-    schedule["release"][release_week] = shortage
+        bom_items = MementoMaterial.query.filter_by(
+            memento_id=customer_order.memento_id
+        ).all()
+
+        for bom in bom_items:
+
+            if (
+                bom.material_type ==
+                material.material_type
+                and
+                bom.material_id ==
+                material.material_id
+            ):
+
+                qty_needed = (
+
+                    bom.quantity_used
+                    *
+                    customer_order.order_quantity
+
+                )
+
+                schedule["gross"][
+                    customer_order.due_week
+                ] += qty_needed
+
+    # =========================
+    # SCHEDULED RECEIPTS
+    # PURCHASE ORDERS
+    # =========================
+
+    purchase_orders = OrderItem.query.filter_by(
+        item_type=material.material_type,
+        status="Received"
+    ).all()
+
+    for po in purchase_orders:
+
+        if po.code != material_name:
+            continue
+
+        if not po.received_date:
+            continue
+
+        week = po.received_date.isocalendar()[1]
+
+        if 1 <= week <= due_week:
+
+            schedule[
+                "scheduled_receipt"
+            ][week] += po.quantity
+
+    # =========================
+    # MRP EXPLOSION
+    # =========================
+
+    current_inventory = available
+
+    for week in range(1, due_week + 1):
+
+        gross = schedule["gross"][week]
+
+        scheduled_receipt = (
+            schedule["scheduled_receipt"][week]
+        )
+
+        current_inventory += (
+            scheduled_receipt
+        )
+
+        projected_after_demand = (
+            current_inventory
+            -
+            gross
+        )
+
+        if projected_after_demand < safety_stock:
+
+            net_req = (
+
+                safety_stock
+                -
+                projected_after_demand
+
+            )
+
+            schedule["net"][
+                week
+            ] = net_req
+
+            schedule["receipt"][
+                week
+            ] = net_req
+
+            release_week = max(
+                1,
+                week - lead_time
+            )
+
+            schedule["release"][
+                release_week
+            ] += net_req
+
+            projected_after_demand += (
+                net_req
+            )
+
+        schedule["projected"][
+            week
+        ] = projected_after_demand
+
+        current_inventory = (
+            projected_after_demand
+        )
 
     return render_template(
+
         "admin/mrp_schedule.html",
 
         order=order,

@@ -98,6 +98,38 @@
                 <tr>
 
                     <td>
+                        Scheduled Receipts
+                    </td>
+
+                    {% for week in range(1,due_week+1) %}
+
+                    <td>
+                        {{ schedule.scheduled_receipt[week] }}
+                    </td>
+
+                    {% endfor %}
+
+                </tr>
+
+                <tr>
+
+                    <td>
+                        Projected Available Balance
+                    </td>
+
+                    {% for week in range(1,due_week+1) %}
+
+                    <td>
+                        {{ schedule.projected[week] }}
+                    </td>
+
+                    {% endfor %}
+
+                </tr>
+
+                <tr>
+
+                    <td>
 
                         Net Requirements
 
