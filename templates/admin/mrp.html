@@ -281,7 +281,19 @@
 
     <td>{{ row.lead_time }}</td>
 
-    <td>Week {{ row.order_week }}</td>
+    <td>
+
+        {% if row.order_week %}
+
+            Week {{ row.order_week }}
+
+        {% else %}
+
+            -
+
+        {% endif %}
+
+        </td>
 
     <td>
 

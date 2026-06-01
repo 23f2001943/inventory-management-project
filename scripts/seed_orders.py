@@ -2,7 +2,11 @@ import sys
 import os
 import random
 
-from datetime import date, timedelta, datetime
+from datetime import (
+    date,
+    timedelta,
+    datetime
+)
 
 sys.path.append(
     os.path.dirname(
@@ -17,7 +21,17 @@ from controller.models import *
 
 with app.app_context():
 
-    print("Starting Order Seeding...")
+    print("================================")
+    print("DELETING OLD ORDERS")
+    print("================================")
+
+    OrderItem.query.delete()
+    Order.query.delete()
+    MRPOrder.query.delete()
+
+    db.session.commit()
+
+    print("Old orders deleted")
 
     # =====================================
     # LOAD MASTER DATA
@@ -27,13 +41,10 @@ with app.app_context():
     paints = Paint.query.all()
     boards = Board.query.all()
     accessories = Accessory.query.all()
-
     mementos = Memento.query.all()
 
     # =====================================
     # DATE RANGE
-    # Previous FY:
-    # 01-Apr-2025 to 31-Mar-2026
     # =====================================
 
     start_date = date(2025, 4, 1)
@@ -44,7 +55,7 @@ with app.app_context():
     ).days
 
     # =====================================
-    # CREATE MRP ORDERS
+    # MRP ORDERS
     # =====================================
 
     print("Creating MRP Orders...")
@@ -57,28 +68,28 @@ with app.app_context():
 
         r = random.random()
 
-        # 60% small
+        # 60%
         if r < 0.60:
 
             qty = random.randint(
-                50,
-                200
+                200,
+                350
             )
 
-        # 30% medium
+        # 30%
         elif r < 0.90:
 
             qty = random.randint(
-                200,
+                350,
                 500
             )
 
-        # 10% large
+        # 10%
         else:
 
             qty = random.randint(
                 500,
-                1000
+                600
             )
 
         mrp_order = MRPOrder(
@@ -89,7 +100,7 @@ with app.app_context():
 
             due_week=random.randint(
                 1,
-                50
+                52
             ),
 
             created_at=datetime.utcnow()
@@ -105,26 +116,12 @@ with app.app_context():
     print("MRP Orders Created")
 
     # =====================================
-    # CREATE PURCHASE ORDERS
+    # PURCHASE ORDERS
     # =====================================
 
     print("Creating Purchase Orders...")
 
     for _ in range(500):
-
-        order = Order()
-
-        db.session.add(order)
-
-        db.session.flush()
-
-        # ==========================
-        # DISTRIBUTION
-        # Foil       35%
-        # Board      35%
-        # Accessory  20%
-        # Paint      10%
-        # ==========================
 
         r = random.random()
 
@@ -138,12 +135,26 @@ with app.app_context():
                 foils
             )
 
-            qty = random.randint(
-                300,
-                500
+            supplier_material = (
+                SupplierMaterial.query.filter_by(
+                    item_type="Foil",
+                    item_name=foil.foil_code
+                ).first()
             )
 
-            received_date = (
+            if not supplier_material:
+                continue
+
+            lead_time = (
+                supplier_material.lead_time
+            )
+
+            qty = random.randint(
+                400,
+                600
+            )
+
+            order_date = (
                 start_date
                 +
                 timedelta(
@@ -153,6 +164,24 @@ with app.app_context():
                     )
                 )
             )
+
+            arrival_date = (
+                order_date
+                +
+                timedelta(
+                    weeks=lead_time
+                )
+            )
+
+            order = Order(
+                created_at=datetime.combine(
+                    order_date,
+                    datetime.min.time()
+                )
+            )
+
+            db.session.add(order)
+            db.session.flush()
 
             item = OrderItem(
 
@@ -170,15 +199,13 @@ with app.app_context():
 
                 status="Received",
 
-                arrival_date=received_date,
+                arrival_date=arrival_date,
 
-                received_date=received_date
-
+                received_date=arrival_date
             )
 
             db.session.add(item)
 
-            # Inventory Update
             foil.quantity += qty
 
         # =====================================
@@ -191,12 +218,26 @@ with app.app_context():
                 boards
             )
 
-            qty = random.randint(
-                50,
-                100
+            supplier_material = (
+                SupplierMaterial.query.filter_by(
+                    item_type="Board",
+                    item_name=board.name
+                ).first()
             )
 
-            received_date = (
+            if not supplier_material:
+                continue
+
+            lead_time = (
+                supplier_material.lead_time
+            )
+
+            qty = random.randint(
+                200,
+                400
+            )
+
+            order_date = (
                 start_date
                 +
                 timedelta(
@@ -206,6 +247,24 @@ with app.app_context():
                     )
                 )
             )
+
+            arrival_date = (
+                order_date
+                +
+                timedelta(
+                    weeks=lead_time
+                )
+            )
+
+            order = Order(
+                created_at=datetime.combine(
+                    order_date,
+                    datetime.min.time()
+                )
+            )
+
+            db.session.add(order)
+            db.session.flush()
 
             item = OrderItem(
 
@@ -223,10 +282,9 @@ with app.app_context():
 
                 status="Received",
 
-                arrival_date=received_date,
+                arrival_date=arrival_date,
 
-                received_date=received_date
-
+                received_date=arrival_date
             )
 
             db.session.add(item)
@@ -243,12 +301,26 @@ with app.app_context():
                 accessories
             )
 
-            qty = random.randint(
-                200,
-                350
+            supplier_material = (
+                SupplierMaterial.query.filter_by(
+                    item_type="Accessory",
+                    item_name=accessory.name
+                ).first()
             )
 
-            received_date = (
+            if not supplier_material:
+                continue
+
+            lead_time = (
+                supplier_material.lead_time
+            )
+
+            qty = random.randint(
+                250,
+                500
+            )
+
+            order_date = (
                 start_date
                 +
                 timedelta(
@@ -258,6 +330,24 @@ with app.app_context():
                     )
                 )
             )
+
+            arrival_date = (
+                order_date
+                +
+                timedelta(
+                    weeks=lead_time
+                )
+            )
+
+            order = Order(
+                created_at=datetime.combine(
+                    order_date,
+                    datetime.min.time()
+                )
+            )
+
+            db.session.add(order)
+            db.session.flush()
 
             item = OrderItem(
 
@@ -275,10 +365,9 @@ with app.app_context():
 
                 status="Received",
 
-                arrival_date=received_date,
+                arrival_date=arrival_date,
 
-                received_date=received_date
-
+                received_date=arrival_date
             )
 
             db.session.add(item)
@@ -295,12 +384,26 @@ with app.app_context():
                 paints
             )
 
-            qty = random.randint(
-                15,
-                30
+            supplier_material = (
+                SupplierMaterial.query.filter_by(
+                    item_type="Paint",
+                    item_name=paint.name
+                ).first()
             )
 
-            received_date = (
+            if not supplier_material:
+                continue
+
+            lead_time = (
+                supplier_material.lead_time
+            )
+
+            qty = random.randint(
+                50,
+                100
+            )
+
+            order_date = (
                 start_date
                 +
                 timedelta(
@@ -310,6 +413,24 @@ with app.app_context():
                     )
                 )
             )
+
+            arrival_date = (
+                order_date
+                +
+                timedelta(
+                    weeks=lead_time
+                )
+            )
+
+            order = Order(
+                created_at=datetime.combine(
+                    order_date,
+                    datetime.min.time()
+                )
+            )
+
+            db.session.add(order)
+            db.session.flush()
 
             item = OrderItem(
 
@@ -327,10 +448,9 @@ with app.app_context():
 
                 status="Received",
 
-                arrival_date=received_date,
+                arrival_date=arrival_date,
 
-                received_date=received_date
-
+                received_date=arrival_date
             )
 
             db.session.add(item)
@@ -342,5 +462,5 @@ with app.app_context():
     print("Purchase Orders Created")
 
     print("================================")
-    print("ORDER SEEDING COMPLETED")
+    print("SEEDING COMPLETED")
     print("================================")

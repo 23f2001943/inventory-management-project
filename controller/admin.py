@@ -1588,10 +1588,16 @@ def view_single_mrp(order_id):
             need + safety_stock - available
         )
 
-        order_week = max(
-            1,
-            order.due_week - lead_time
-        )
+        if shortage > 0:
+
+            order_week = max(
+                1,
+                order.due_week - lead_time
+            )
+
+        else:
+
+            order_week = None
 
         mrp_rows.append({
 
